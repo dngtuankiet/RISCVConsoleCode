@@ -9,6 +9,8 @@
 #include "devices/plic.h"
 #include "devices/spi.h"
 #include "devices/uart.h"
+#include "devices/codec.h"
+#include "devices/i2c.h"
 
  // Some things missing from the official encoding.h
 #if __riscv_xlen == 32

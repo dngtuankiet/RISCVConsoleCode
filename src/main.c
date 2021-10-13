@@ -17,6 +17,7 @@
 #include <platform.h>
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
+#include "codec/codec.h"
 
 volatile unsigned long dtb_target;
 
@@ -276,6 +277,8 @@ unsigned long plic_reg;
 int plic_max_priority;
 int plic_ndevs;
 int timescale_freq;
+unsigned long i2c_reg = 0;
+unsigned long codec_reg = 0;
 
 //HART 0 runs main
 int main(int id, unsigned long dtb)
@@ -285,8 +288,6 @@ int main(int id, unsigned long dtb)
   int err = 0;
   int len;
 	const fdt32_t *val;
-  
-  
   
   // 1. Get the uart reg
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/serial");
@@ -375,6 +376,30 @@ int main(int id, unsigned long dtb)
               plic_max_priority);
   }
   
+  // 6. Get the i2c controller
+  nodeoffset = fdt_path_offset((void*)dtb, "/soc/i2c");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find '/soc/i2c'\r\nAborting...");
+    while(1);
+  }
+  err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &i2c_reg, NULL);
+  if (err < 0) {
+    kputs("\r\nCannot get reg space from '/soc/i2c'\r\nAborting...");
+    while(1);
+  }
+  
+  // 7. Get the codec controller
+  nodeoffset = fdt_path_offset((void*)dtb, "/soc/codec");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find '/soc/codec'\r\nAborting...");
+    while(1);
+  }
+  err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &codec_reg, NULL);
+  if (err < 0) {
+    kputs("\r\nCannot get reg space from '/soc/codec'");
+    codec_reg = 0;
+  }
+  
   // Display some information
 #define DEQ(mon, x) ((cdate[0] == mon[0] && cdate[1] == mon[1] && cdate[2] == mon[2]) ? x : 0)
   const char *cdate = __DATE__;
@@ -458,7 +483,10 @@ int main(int id, unsigned long dtb)
 
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
   
-  while(1);
+  if(codec_reg) codec_record_demo();
+  else {
+    while(1);
+  }
 
   //dead code
   return 0;

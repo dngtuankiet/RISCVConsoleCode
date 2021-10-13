@@ -69,6 +69,9 @@ inline void clkutils_delay_ns(int delay_ns, int period_ns) {
   while (now < then);
 }
 
+#define metal_utime clkutils_read_mtime
+uint32_t metal_time(void);
+
 #endif /* !__ASSEMBLER__ */
 
 #endif /* _LIBRARIES_CLKUTILS_H */

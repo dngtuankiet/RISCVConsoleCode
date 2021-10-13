@@ -2,5 +2,10 @@
 #define _MAIN_H
 
 extern unsigned long uart_reg;
+extern int timescale_freq;
+extern int tlclk_freq;
+
+extern unsigned long i2c_reg;
+extern unsigned long codec_reg;
 
 #endif // _MAIN_H

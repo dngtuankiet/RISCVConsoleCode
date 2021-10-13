@@ -29,6 +29,7 @@ LIB_FS_O= \
 	clkutils/clkutils.o \
 	kprintf/kprintf.o \
 	plic/plic_driver.o \
+	i2c/driver.o \
 	lib/memcpy.o \
 	lib/memset.o \
 	lib/strcmp.o \
@@ -39,6 +40,8 @@ LIB_FS_O= \
 	lib/memcmp.o \
 	lib/strrchr.o \
 	lib/strnlen.o \
+	lib/codec/codec.o \
+	lib/codec/record_demo.o \
 	libfdt/fdt.o libfdt/fdt_ro.o libfdt/fdt_wip.o libfdt/fdt_sw.o libfdt/fdt_rw.o libfdt/fdt_strerror.o libfdt/fdt_empty_tree.o \
 	libfdt/fdt_addresses.o libfdt/fdt_check.o
 
