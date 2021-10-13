@@ -1,0 +1,10 @@
+maskrom_loc.ld
+.vscode
+*~
+*.o
+*.dump
+*.elf
+*.bin
+*.hex
+*.map
+
