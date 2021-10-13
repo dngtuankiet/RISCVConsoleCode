@@ -332,6 +332,7 @@ int main(int id, unsigned long dtb)
   // 4. Get the number of cores
   uint32_t num_cores = 0;
   err = fdt_parse_max_hart_id((void*)dtb, &num_cores);
+  num_cores++; // Gives maxid. For max cores we need to add 1
   
   // 5. Get the plic parameters
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/interrupt-controller");

@@ -8,14 +8,10 @@ PHDRS
   bss PT_LOAD;
 }
 
-INCLUDE maskrom_loc.ld
-
 SECTIONS
 {
   PROVIDE(_ram = ORIGIN(memory_mem));
   PROVIDE(_ram_end = _ram + LENGTH(memory_mem));
-  
-  . = MASKROM;
 
   .text ALIGN((ORIGIN(memory_mem) + 0x0), 8) : AT(ALIGN((ORIGIN(memory_mem) + 0x0), 8)) {
     PROVIDE(_ftext = .);

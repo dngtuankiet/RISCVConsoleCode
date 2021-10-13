@@ -25,7 +25,7 @@ LIB_FS_O= \
 	src/start.o \
 	src/main.o \
 	uart/uart.o \
-	lib/version.o \
+	$(BUILD_DIR)/version.o \
 	clkutils/clkutils.o \
 	kprintf/kprintf.o \
 	plic/plic_driver.o \
@@ -41,6 +41,12 @@ LIB_FS_O= \
 	lib/strnlen.o \
 	libfdt/fdt.o libfdt/fdt_ro.o libfdt/fdt_wip.o libfdt/fdt_sw.o libfdt/fdt_rw.o libfdt/fdt_strerror.o libfdt/fdt_empty_tree.o \
 	libfdt/fdt_addresses.o libfdt/fdt_check.o
+
+$(BUILD_DIR)/version.c:
+	mkdir -p $(BUILD_DIR)
+	echo "const char *gitid = \"$(shell git describe --always --dirty)\";" > $(BUILD_DIR)/version.c
+	echo "const char *gitdate = \"$(shell git log -n 1 --date=short --format=format:"%ad.%h" HEAD)\";" >> $(BUILD_DIR)/version.c
+	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" >> $(BUILD_DIR)/version.c
 
 %.o: %.S
 	$(CC) $(CFLAGS) -DFSBL_TARGET_ADDR=$(FSBL_TARGET_ADDR) -c $< -o $@
@@ -60,7 +66,6 @@ bin := $(BUILD_DIR)/out.bin
 $(bin): $(elf)
 	$(OBJCOPY) -O binary $< $@
 	$(OBJDUMP) -d $^ > $@.dump
-	- riscv32-unknown-elf-objdump -b binary -D $@ --adjust-vma=$(FSBL_SOURCE_ADDR) -m RISCV > $@.rv32.dump
 
 .PHONY: bin
 bin: $(bin)

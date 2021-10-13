@@ -22,8 +22,6 @@ static inline void _kputs(const char *s)
 void kputs(const char *s)
 {
 	_kputs(s);
-	kputc('\r');
-	kputc('\n');
 }
 
 void kprintf(const char *fmt, ...)
