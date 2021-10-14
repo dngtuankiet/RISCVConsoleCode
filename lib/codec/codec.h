@@ -38,6 +38,7 @@
 
 void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling);
 void codec_sample_now(void* codec, int32_t *destl, int32_t *destr, uint32_t size, uint32_t mask);
+void codec_play_now(void* codec, int32_t *srcl, int32_t *srcr, uint32_t size);
 void codec_record_demo();
 
 #endif // _CODEC_H

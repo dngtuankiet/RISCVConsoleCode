@@ -33,8 +33,11 @@ void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling) {
   // 4. Enable USB mode (1 in R8 D0). Sampling will be "sampling". Dividers in zero 
   CODEC_DATA(0x08, sampling << 1 | 1, buf)
   i2c0_write(i2c, CODEC_ADDR, 2, buf, METAL_I2C_STOP_ENABLE);
-  // 5. Sample from mic (INSEL 1 R4 D2). No mute, no boost, no sidetone. no DACSEL, and no Bypass
-  CODEC_DATA(0x04, 1 << 2, buf)
+  // 5. Sample from mic (INSEL 1 R4 D2). No mute, no boost, no sidetone. DACSEL activated, and no Bypass
+  CODEC_DATA(0x04, 1 << 4 | 1 << 2, buf)
+  i2c0_write(i2c, CODEC_ADDR, 2, buf, METAL_I2C_STOP_ENABLE);
+  // 6. DC offset off, DACMU no mute (0), no DEEMPHasis, no ADC high-pass
+  CODEC_DATA(0x05, 0, buf)
   i2c0_write(i2c, CODEC_ADDR, 2, buf, METAL_I2C_STOP_ENABLE);
   // Wait 34ms
   uint64_t dest = metal_utime() + 34000;
@@ -65,6 +68,24 @@ void codec_sample_now(void* codec, int32_t *destl, int32_t *destr, uint32_t size
     *destr = (int32_t)CODEC_REG(CODEC_REG_IN_R);
     destl++;
     destr++;
+    size--;
+  }
+}
+
+void codec_play_now(void* codec, int32_t *srcl, int32_t *srcr, uint32_t size) {
+  while(size) {
+    uint32_t timeout = metal_time() + 1;
+    while(!(CODEC_REG(CODEC_REG_STATUS) & CODEC_STAT_AUD_OUT_ALLOW)) {
+      if(metal_time() > timeout) {
+        kputs("WARNING: Timeout in codec play!\n");
+        return;
+      }
+    }
+    CODEC_REG(CODEC_REG_OUT_L) = (uint32_t)*srcl;
+    CODEC_REG(CODEC_REG_OUT_R) = (uint32_t)*srcr;
+    CODEC_REG(CODEC_REG_CTRL) = CODEC_CTRL_WRITE_AUD_OUT;
+    srcl++;
+    srcr++;
     size--;
   }
 }

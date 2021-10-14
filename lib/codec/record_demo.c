@@ -16,5 +16,12 @@ void codec_record_demo()
   while(1) {
     codec_sample_now((void*)codec_reg, l, r, 128, CODEC_MASK_32B);
     kprintf("\r%i %i %i %i", l[0], l[32], l[64], l[96]);
+    for(int i = 0; i < 128; i++) {
+      // Sawtooth
+      l[i] = i << 20;
+      // Inverted Sawtooth
+      r[i] = (127-i) << 20;
+    }
+    codec_play_now((void*)codec_reg, l, r, 128);
   }
 }
