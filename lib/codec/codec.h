@@ -37,7 +37,7 @@
 #define CODEC_MASK_32B 0xFFFFFFFF
 
 void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling);
-void codec_sample_now(void* codec, uint32_t *destl, uint32_t *destr, uint32_t size, uint32_t mask);
+void codec_sample_now(void* codec, int32_t *destl, int32_t *destr, uint32_t size, uint32_t mask);
 void codec_record_demo();
 
 #endif // _CODEC_H

@@ -61,15 +61,19 @@ void kprintf(const char *fmt, ...)
 				break;
 			}
 			case 'd': {
-				unsigned long num;
+				long num;
 				long inum;
         char p[20];
 				if (is_long) {
-					num = va_arg(vl, unsigned long);
+					num = va_arg(vl, long);
 					inum = 20;
 				} else {
-					num = va_arg(vl, unsigned int);
+					num = va_arg(vl, int);
 					inum = 10;
+				}
+				if(num < 0) {
+				  kputc('-');
+				  num = -num;
 				}
 				if(num==0) kputc('0');
         else {
@@ -84,6 +88,31 @@ void kprintf(const char *fmt, ...)
               flag = 1;
             }
           }
+        }
+				break;
+			}
+			case 'i': {
+				long num;
+				long inum;
+        char p[20];
+				if (is_long) {
+					num = va_arg(vl, long);
+					inum = 20;
+				} else {
+					num = va_arg(vl, int);
+					inum = 10;
+				}
+				if(num < 0) {
+				  kputc('-');
+				  num = -num;
+				}
+				else kputc('0');
+        for(int i=inum-1; i>=0; i--) {
+          p[i] = '0' + num%10;
+          num = num/10;
+        }
+        for(int i=0; i<inum; i++) {
+          kputc(p[i]);
         }
 				break;
 			}
