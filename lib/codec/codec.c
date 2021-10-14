@@ -48,7 +48,10 @@ void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling) {
 }
 
 void codec_sample_now(void* codec, int32_t *destl, int32_t *destr, uint32_t size, uint32_t mask) {
-  CODEC_REG(CODEC_REG_CTRL) = CODEC_CTRL_CLR_AUD_IN; //Clear the FIFO
+  while((CODEC_REG(CODEC_REG_STATUS) & CODEC_STAT_AUD_IN_AVAIL))
+    CODEC_REG(CODEC_REG_CTRL) = CODEC_CTRL_READ_AUD_IN; //Clear the FIFO
+    
+  // CODEC_REG(CODEC_REG_CTRL) = CODEC_CTRL_CLR_AUD_IN; //Clear the FIFO (TODO: Does not work)
   while(size) {
     uint32_t timeout = metal_time() + 1;
     while(!(CODEC_REG(CODEC_REG_STATUS) & CODEC_STAT_AUD_IN_AVAIL)) {
