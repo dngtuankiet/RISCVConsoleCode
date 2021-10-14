@@ -1,86 +1,107 @@
-/* Copyright (c) 2018 SiFive, Inc */
-/* SPDX-License-Identifier: Apache-2.0 */
-/* SPDX-License-Identifier: GPL-2.0-or-later */
-/* See the file LICENSE for further information */
+/*
+FUNCTION
+        <<memcpy>>---copy memory regions
 
-/* Copyright (c) 2017  SiFive Inc. All rights reserved.
+SYNOPSIS
+        #include <string.h>
+        void* memcpy(void *restrict <[out]>, const void *restrict <[in]>,
+                     size_t <[n]>);
 
-   This copyrighted material is made available to anyone wishing to use,
-   modify, copy, or redistribute it subject to the terms and conditions
-   of the FreeBSD License.   This program is distributed in the hope that
-   it will be useful, but WITHOUT ANY WARRANTY expressed or implied,
-   including the implied warranties of MERCHANTABILITY or FITNESS FOR
-   A PARTICULAR PURPOSE.  A copy of this license is available at
-   http://www.opensource.org/licenses.
-*/
+DESCRIPTION
+        This function copies <[n]> bytes from the memory region
+        pointed to by <[in]> to the memory region pointed to by
+        <[out]>.
 
+        If the regions overlap, the behavior is undefined.
+
+RETURNS
+        <<memcpy>> returns a pointer to the first byte of the <[out]>
+        region.
+
+PORTABILITY
+<<memcpy>> is ANSI C.
+
+<<memcpy>> requires no supporting OS subroutines.
+
+QUICKREF
+        memcpy ansi pure
+	*/
+
+#include <_ansi.h>
 #include <string.h>
-#include <stdint.h>
+//#include "local.h"
 
-#define unlikely(X) __builtin_expect (!!(X), 0)
+#define PREFER_SIZE_OVER_SPEED
+
+/* Nonzero if either X or Y is not aligned on a "long" boundary.  */
+#define UNALIGNED(X, Y) \
+  (((long)X & (sizeof (long) - 1)) | ((long)Y & (sizeof (long) - 1)))
+
+/* How many bytes are copied each iteration of the 4X unrolled loop.  */
+#define BIGBLOCKSIZE    (sizeof (long) << 2)
+
+/* How many bytes are copied each iteration of the word copy loop.  */
+#define LITTLEBLOCKSIZE (sizeof (long))
+
+/* Threshhold for punting to the byte copier.  */
+#define TOO_SMALL(LEN)  ((LEN) < BIGBLOCKSIZE)
 
 void *
-memcpy(void *__restrict aa, const void *__restrict bb, size_t n)
+
+memcpy (void *__restrict dst0,
+	const void *__restrict src0,
+	size_t len0)
 {
-  #define BODY(a, b, t) { \
-    t tt = *b; \
-    a++, b++; \
-    *(a - 1) = tt; \
-  }
+#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+  char *dst = (char *) dst0;
+  char *src = (char *) src0;
 
-  char *a = (char *)aa;
-  const char *b = (const char *)bb;
-  char *end = a + n;
-  uintptr_t msk = sizeof (long) - 1;
-  if (unlikely ((((uintptr_t)a & msk) != ((uintptr_t)b & msk))
-	       || n < sizeof (long)))
+  void *save = dst0;
+
+  while (len0--)
     {
-small:
-      if (__builtin_expect (a < end, 1))
-	while (a < end)
-	  BODY (a, b, char);
-      return aa;
+      *dst++ = *src++;
     }
 
-  if (unlikely (((uintptr_t)a & msk) != 0))
-    while ((uintptr_t)a & msk)
-      BODY (a, b, char);
+  return save;
+#else
+  char *dst = dst0;
+  const char *src = src0;
+  long *aligned_dst;
+  const long *aligned_src;
 
-  long *la = (long *)a;
-  const long *lb = (const long *)b;
-  long *lend = (long *)((uintptr_t)end & ~msk);
-
-  if (unlikely (lend - la > 8))
+  /* If the size is small, or either SRC or DST is unaligned,
+     then punt into the byte copy loop.  This should be rare.  */
+  if (!TOO_SMALL(len0) && !UNALIGNED (src, dst))
     {
-      while (lend - la > 8)
-	{
-	  long b0 = *lb++;
-	  long b1 = *lb++;
-	  long b2 = *lb++;
-	  long b3 = *lb++;
-	  long b4 = *lb++;
-	  long b5 = *lb++;
-	  long b6 = *lb++;
-	  long b7 = *lb++;
-	  long b8 = *lb++;
-	  *la++ = b0;
-	  *la++ = b1;
-	  *la++ = b2;
-	  *la++ = b3;
-	  *la++ = b4;
-	  *la++ = b5;
-	  *la++ = b6;
-	  *la++ = b7;
-	  *la++ = b8;
-	}
+      aligned_dst = (long*)dst;
+      aligned_src = (long*)src;
+
+      /* Copy 4X long words at a time if possible.  */
+      while (len0 >= BIGBLOCKSIZE)
+        {
+          *aligned_dst++ = *aligned_src++;
+          *aligned_dst++ = *aligned_src++;
+          *aligned_dst++ = *aligned_src++;
+          *aligned_dst++ = *aligned_src++;
+          len0 -= BIGBLOCKSIZE;
+        }
+
+      /* Copy one long word at a time if possible.  */
+      while (len0 >= LITTLEBLOCKSIZE)
+        {
+          *aligned_dst++ = *aligned_src++;
+          len0 -= LITTLEBLOCKSIZE;
+        }
+
+       /* Pick up any residual with a byte copier.  */
+      dst = (char*)aligned_dst;
+      src = (char*)aligned_src;
     }
 
-  while (la < lend)
-    BODY (la, lb, long);
+  while (len0--)
+    *dst++ = *src++;
 
-  a = (char *)la;
-  b = (const char *)lb;
-  if (unlikely (a < end))
-    goto small;
-  return aa;
+  return dst0;
+#endif /* not PREFER_SIZE_OVER_SPEED */
 }

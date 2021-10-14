@@ -9,6 +9,7 @@
 #define CODEC_ADDR 0x1A
 #define CODEC_REG(i) _REG32(codec, i)
 
+//based on SSM2603 datasheet
 void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling) {
   unsigned char buf[2];
   
@@ -19,9 +20,9 @@ void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling) {
   CODEC_DATA(0x06, 1 << 4, buf) 
   i2c0_write(i2c, CODEC_ADDR, 2, buf, METAL_I2C_STOP_ENABLE);
   // Configuration
-  // 1. Digital Audio IF. Data word length = 24 bits (1,0 in R7 D3,D2). Format = I2S mode (10 in R7, D1,D0)
+  // 1. Digital Audio IF. Data word length = "word" bits (R7 D3,D2). Format = "format" mode (R7, D1,D0)
   // 1b. Enable Master Mode in 1 also. (1 in R7, D6)
-  CODEC_DATA(0x07, 1 << 6 | 2 << 2 | 2 << 0, buf) 
+  CODEC_DATA(0x07, 1 << 6 | word << 2 | format << 0, buf) 
   i2c0_write(i2c, CODEC_ADDR, 2, buf, METAL_I2C_STOP_ENABLE);
   // 2. Left ADC volume. No BOTH, No LinMute, Vol = 0dB (010111 in R0 D5-0)
   CODEC_DATA(0x00, 0 << 8 | 0 << 7 | 0x17, buf) 
@@ -47,7 +48,7 @@ void codec_init(void* i2c, uint8_t word, uint8_t format, uint8_t sampling) {
 }
 
 void codec_sample_now(void* codec, uint32_t *destl, uint32_t *destr, uint32_t size, uint32_t mask) {
-  CODEC_REG(CODEC_REG_CTRL) = CODEC_CTRL_CLR_AUD_IN;
+  CODEC_REG(CODEC_REG_CTRL) = CODEC_CTRL_CLR_AUD_IN; //Clear the FIFO
   while(size) {
     uint32_t timeout = metal_time() + 1;
     while(!(CODEC_REG(CODEC_REG_STATUS) & CODEC_STAT_AUD_IN_AVAIL)) {
