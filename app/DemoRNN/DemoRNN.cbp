@@ -30,7 +30,13 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add directory="../../lib/FFT_int" />
 		</Compiler>
+		<Unit filename="../../lib/FFT_int/fix_fft.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../lib/FFT_int/fix_fft.h" />
+		<Unit filename="src/main.cpp" />
 		<Extensions />
 	</Project>
 </CodeBlocks_project_file>
