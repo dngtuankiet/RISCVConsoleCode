@@ -11,6 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="/media/SharedUbuntu/1.wav /media/SharedUbuntu/1.txt /media/SharedUbuntu/1.fft" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -32,6 +33,9 @@
 			<Add option="-Wall" />
 			<Add directory="../../lib/FFT_int" />
 		</Compiler>
+		<Linker>
+			<Add option="-lsndfile" />
+		</Linker>
 		<Unit filename="../../lib/FFT_int/fix_fft.c">
 			<Option compilerVar="CC" />
 		</Unit>

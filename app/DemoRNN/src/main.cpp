@@ -5,6 +5,7 @@
 #include <float.h>
 
 #include <sndfile.h>
+#include "fix_fft.h"
 
 #define	BLOCK_SIZE 4096
 
@@ -20,7 +21,7 @@
 
 static void
 print_usage (char *progname)
-{	printf ("\nUsage : %s [--full-precision] <input file> <output file>\n", progname) ;
+{	printf ("\nUsage : %s <input file> <output file> <fft file>\n", progname) ;
 	puts ("\n"
 		"    Where the output file will contain a line for each frame\n"
 		"    and a column for each channel.\n"
@@ -29,10 +30,11 @@ print_usage (char *progname)
 } /* print_usage */
 
 static int
-convert_to_text (SNDFILE * infile, FILE * outfile, int channels, int full_precision)
+convert_to_text (SNDFILE * infile, FILE * outfile, int channels)
 {	int *buf ;
 	sf_count_t frames ;
 	int k, m, readcount ;
+	sf_seek(infile, 0, SEEK_SET  );
 
 	buf = (int *)malloc (BLOCK_SIZE * sizeof (int)) ;
 	if (buf == NULL)
@@ -55,27 +57,81 @@ convert_to_text (SNDFILE * infile, FILE * outfile, int channels, int full_precis
 	return 0 ;
 } /* convert_to_text */
 
+static int
+get_fft (SNDFILE * infile, FILE * outfile, int channels, long int frames)
+{	int *buf ;
+	short *fft ;
+	sf_seek(infile, 0, SEEK_SET  );
+	buf = (int *)malloc (frames * channels * sizeof (int)) ;
+	if (buf == NULL)
+	{	printf ("Error : Out of memory.\n\n") ;
+		return 1 ;
+		} ;
+
+    // Determinate the number of samples in powers of 2
+    int m = 0;
+    long int aframes = frames;
+    while(aframes > 0) {
+        aframes >>= 1;
+        m++;
+    }
+
+    // Allocate the memory for the fft, which is 2 times N, which is 2**m
+    long int siz = 1<<(m+1); // Which is the same as (2**m)*2
+    fft = (short *)malloc (siz * sizeof (short)) ;
+	if (fft == NULL)
+	{	printf ("Error : Out of memory.\n\n") ;
+		return 1 ;
+		} ;
+    memset(fft, 0, siz * sizeof (short));
+
+    // We need to read the exact number of frames (frames is the same as samples)
+    long int readframes;
+    aframes = BLOCK_SIZE / channels;
+    int* buft = buf;
+    while((readframes = sf_readf_int (infile, buft, aframes)) > 0) {
+        buft += readframes;
+    }
+
+	// Now, convert the value to short. Is just dividing by 65535 (or 2^16)
+	for (int k = 0 ; k < frames ; k++)
+    {
+        // The channel is the 1st one
+        fft[k] = (short)(buf[k * channels/* + m*/] >> 16);
+        } ;
+
+    // Invoke the fft
+    fix_fftr(fft, m, 0);
+
+    // Save the FFT
+    fprintf (outfile, "# FFT result\n") ;
+    fprintf (outfile, "# REAL IMAG\n") ;
+    int N = (1 << m);
+    for(int k = 0; k < N; k++) {
+        fprintf (outfile, "%hd, %hd\n", fft[k], fft[N + k]) ;
+    }
+
+	free (buf) ;
+	free (fft) ;
+
+	return 0 ;
+} /* convert_to_text */
+
 int
 main (int argc, char * argv [])
-{	char 		*progname, *infilename, *outfilename ;
+{	char 		*progname, *infilename, *outfilename, *outfftfilename ;
 	SNDFILE		*infile = NULL ;
 	FILE		*outfile = NULL ;
+	FILE		*outfftfile = NULL ;
 	SF_INFO		sfinfo ;
-	int		full_precision = 0 ;
 	int 	ret = 1 ;
 
 	progname = strrchr (argv [0], '/') ;
 	progname = progname ? progname + 1 : argv [0] ;
 
 	switch (argc)
-	{	case 4 :
-			if (!strcmp ("--full-precision", argv [3]))
-			{	print_usage (progname) ;
-				goto cleanup ;
-				} ;
-			full_precision = 1 ;
-			argv++ ;
-		case 3 :
+	{
+		case 4 :
 			break ;
 		default:
 			print_usage (progname) ;
@@ -84,6 +140,7 @@ main (int argc, char * argv [])
 
 	infilename = argv [1] ;
 	outfilename = argv [2] ;
+	outfftfilename = argv [3] ;
 
 	if (strcmp (infilename, outfilename) == 0)
 	{	printf ("Error : Input and output filenames are the same.\n\n") ;
@@ -117,10 +174,17 @@ main (int argc, char * argv [])
 		goto cleanup ;
 		} ;
 
-	fprintf (outfile, "# Converted from file %s.\n", infilename) ;
-	fprintf (outfile, "# Channels %d, Sample rate %d, Format %x\n", sfinfo.channels, sfinfo.samplerate, sfinfo.format) ;
+	/* Open the output file. */
+	if ((outfftfile = fopen (outfftfilename, "w")) == NULL)
+	{	printf ("Not able to open output file %s : %s\n", outfftfilename, sf_strerror (NULL)) ;
+		goto cleanup ;
+		} ;
 
-	ret = convert_to_text (infile, outfile, sfinfo.channels, full_precision) ;
+	fprintf (outfile, "# Converted from file %s.\n", infilename) ;
+	fprintf (outfile, "# Channels %d, Sample rate %d, Format %x, Frames %ld\n", sfinfo.channels, sfinfo.samplerate, sfinfo.format, sfinfo.frames) ;
+
+	ret = convert_to_text (infile, outfile, sfinfo.channels) ;
+	ret = get_fft (infile, outfftfile, sfinfo.channels, sfinfo.frames) ;
 
 cleanup :
 
