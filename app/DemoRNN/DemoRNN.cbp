@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="/media/SharedUbuntu/1.wav /media/SharedUbuntu/1.txt /media/SharedUbuntu/1.fft" />
+				<Option parameters="/media/sf_SharedUbuntu/0_Xiaoting.wav /media/sf_SharedUbuntu/0_Xiaoting.txt /media/sf_SharedUbuntu/0_Xiaoting.fft" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>

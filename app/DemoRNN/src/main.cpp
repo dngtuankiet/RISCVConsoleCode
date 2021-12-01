@@ -88,12 +88,16 @@ get_fft (SNDFILE * infile, FILE * outfile, int channels, long int frames)
     // We need to read the exact number of frames (frames is the same as samples)
     long int readframes;
     aframes = BLOCK_SIZE / channels;
-    int* buft = buf;
-    while((readframes = sf_readf_int (infile, buft, aframes)) > 0) {
-        buft += readframes;
+    int* bufp = buf;
+	int* tbuf = (int *)malloc (BLOCK_SIZE * sizeof (int)) ;
+    while((readframes = sf_readf_int (infile, tbuf, aframes)) > 0) {
+        memcpy(bufp, tbuf, readframes * sizeof (int));
+        bufp += readframes;
     }
+	free (tbuf) ;
 
-	// Now, convert the value to short. Is just dividing by 65535 (or 2^16)
+	// Now, convert the value to short.
+	// For 32-bit, Is just dividing by 65535 (or 2^16)
 	for (int k = 0 ; k < frames ; k++)
     {
         // The channel is the 1st one
@@ -108,7 +112,7 @@ get_fft (SNDFILE * infile, FILE * outfile, int channels, long int frames)
     fprintf (outfile, "# REAL IMAG\n") ;
     int N = (1 << m);
     for(int k = 0; k < N; k++) {
-        fprintf (outfile, "%hd, %hd\n", fft[k], fft[N + k]) ;
+        fprintf (outfile, "%hd, %hd\n", fft[k*2], fft[k*2+1]) ;
     }
 
 	free (buf) ;
