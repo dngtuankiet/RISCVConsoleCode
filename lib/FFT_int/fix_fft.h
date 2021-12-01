@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+int fix_fft(short*, short*, int, int);
 int fix_fftr(short*, int, int);
 
 #ifdef __cplusplus

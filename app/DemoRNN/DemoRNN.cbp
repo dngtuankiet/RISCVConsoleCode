@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="/media/sf_SharedUbuntu/0_Xiaoting.wav /media/sf_SharedUbuntu/0_Xiaoting.txt /media/sf_SharedUbuntu/0_Xiaoting.fft" />
+				<Option parameters="/media/sf_SharedUbuntu/0_Xiaoting.wav /media/sf_SharedUbuntu/0_Xiaoting.txt /media/sf_SharedUbuntu/0_Xiaoting.fft /media/sf_SharedUbuntu/0_Xiaoting.fftd" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -36,6 +36,9 @@
 		<Linker>
 			<Add option="-lsndfile" />
 		</Linker>
+		<Unit filename="../../lib/FFT/fft4g.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="../../lib/FFT_int/fix_fft.c">
 			<Option compilerVar="CC" />
 		</Unit>
