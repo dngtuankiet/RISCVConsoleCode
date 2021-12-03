@@ -8,4 +8,6 @@ extern int tlclk_freq;
 extern unsigned long i2c_reg;
 extern unsigned long codec_reg;
 
+int reckon_start(void);
+
 #endif // _MAIN_H

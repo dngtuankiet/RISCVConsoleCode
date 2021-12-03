@@ -483,7 +483,8 @@ int main(int id, unsigned long dtb)
 
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
   
-  if(codec_reg) codec_record_demo();
+  //if(codec_reg) codec_record_demo();
+  if(codec_reg) reckon_start();
   else {
     while(1);
   }

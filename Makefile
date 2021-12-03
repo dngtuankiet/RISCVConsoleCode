@@ -25,6 +25,7 @@ BUILD_DIR?=$(abspath ./build)
 LIB_FS_O= \
 	src/start.o \
 	src/main.o \
+	src/reckon.o \
 	uart/uart.o \
 	$(BUILD_DIR)/version.o \
 	clkutils/clkutils.o \
@@ -44,6 +45,7 @@ LIB_FS_O= \
 	lib/codec/codec.o \
 	lib/codec/record_demo.o \
 	lib/FFT_int/fix_fft.o \
+	lib/FFT/fft4g.o \
 	libfdt/fdt.o libfdt/fdt_ro.o libfdt/fdt_wip.o libfdt/fdt_sw.o libfdt/fdt_rw.o libfdt/fdt_strerror.o libfdt/fdt_empty_tree.o \
 	libfdt/fdt_addresses.o libfdt/fdt_check.o
 
@@ -65,7 +67,7 @@ $(BUILD_DIR)/version.c:
 elf := $(BUILD_DIR)/out.elf
 $(elf): $(LIB_FS_O)
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LIB_FS_O)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LIB_FS_O) -lgcc -lm -lgcc
 
 .PHONY: elf
 elf: $(elf)
