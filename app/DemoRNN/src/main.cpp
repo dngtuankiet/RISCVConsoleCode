@@ -3,21 +3,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <float.h>
+#include "libmfcc.h"
 
 #include <sndfile.h>
 #include "fix_fft.h"
 
 #define	BLOCK_SIZE 4096
-
-#ifdef DBL_DECIMAL_DIG
-	#define OP_DBL_Digs (DBL_DECIMAL_DIG)
-#else
-	#ifdef DECIMAL_DIG
-		#define OP_DBL_Digs (DECIMAL_DIG)
-	#else
-		#define OP_DBL_Digs (DBL_DIG + 3)
-	#endif
-#endif
 
 static void
 print_usage (char *progname)
@@ -68,7 +59,7 @@ void cdft(int, int, double *, int *, double *);
 #endif
 
 static int
-get_fft (SNDFILE * infile, FILE * outfile, FILE* outdfile, int channels, long int frames)
+get_fft_fftd_mfcc (SNDFILE * infile, FILE * outfile, FILE* outdfile, FILE* outmfccfile, int channels, long int frames, int samplerate)
 {	int *buf ;
 	short *fft ;
 	sf_seek(infile, 0, SEEK_SET  );
@@ -150,11 +141,12 @@ get_fft (SNDFILE * infile, FILE * outfile, FILE* outdfile, int channels, long in
     cdft(m, 1, fftd, ip, w);
 
     // Save the FFT
+    double* realfftn = (double *)malloc (n * sizeof (double)); // We will transfer the real part of the fft here
     fprintf (outfile, "# FFT result\n") ;
     fprintf (outfile, "# REAL IMAG\n") ;
     for(int k = 0; k < n; k++) {
         //fprintf (outfile, "%hd, %hd\n", fft[k*2], fft[k*2+1]) ;
-        double real = (double)fft[k] / 32768.0;
+        double real = realfftn[k] = (double)fft[k] / 32768.0;
         double imag = (double)fft[n+k] / 32768.0;
         fprintf (outfile, "%g, %g -- %hd, %hd\n", real, imag, fft[k], fft[n+k]) ;
     }
@@ -164,6 +156,20 @@ get_fft (SNDFILE * infile, FILE * outfile, FILE* outdfile, int channels, long in
     fprintf (outdfile, "# REAL IMAG\n") ;
     for(int k = 0; k < n; k++) {
         fprintf (outdfile, "%g, %g\n", fftd[k*2], fftd[k*2+1]) ;
+    }
+
+    // Invoke the mfcc. Get the first 13 or so
+#define NUM_MFCC 13
+    double mfcc[NUM_MFCC];
+    for(int coeff = 0; coeff < 13; coeff++)
+	{
+	     mfcc[coeff] = GetCoefficient(realfftn, samplerate, 48, 128, coeff);
+	}
+
+    // Save the MFCC
+    fprintf (outmfccfile, "# MFCC result\n") ;
+    for(int k = 0; k < NUM_MFCC; k++) {
+        fprintf (outmfccfile, "%d %g\n", k, mfcc[k]) ;
     }
 
 	free (buf) ;
@@ -177,11 +183,12 @@ get_fft (SNDFILE * infile, FILE * outfile, FILE* outdfile, int channels, long in
 
 int
 main (int argc, char * argv [])
-{	char 		*progname, *infilename, *outfilename, *outfftfilename, *outfftdfilename ;
+{	char 		*progname, *infilename, *outfilename, *outfftfilename, *outfftdfilename, *outmfccfilename ;
 	SNDFILE		*infile = NULL ;
 	FILE		*outfile = NULL ;
 	FILE		*outfftfile = NULL ;
 	FILE		*outfftdfile = NULL ;
+	FILE		*outmfccfile = NULL ;
 	SF_INFO		sfinfo ;
 	int 	ret = 1 ;
 
@@ -190,7 +197,7 @@ main (int argc, char * argv [])
 
 	switch (argc)
 	{
-		case 5 :
+		case 6 :
 			break ;
 		default:
 			print_usage (progname) ;
@@ -201,6 +208,7 @@ main (int argc, char * argv [])
 	outfilename = argv [2] ;
 	outfftfilename = argv [3] ;
 	outfftdfilename = argv [4] ;
+	outmfccfilename = argv [5] ;
 
 	if (strcmp (infilename, outfilename) == 0)
 	{	printf ("Error : Input and output filenames are the same.\n\n") ;
@@ -246,11 +254,17 @@ main (int argc, char * argv [])
 		goto cleanup ;
 		} ;
 
+	/* Open the output mfcc file. */
+	if ((outmfccfile = fopen (outmfccfilename, "w")) == NULL)
+	{	printf ("Not able to open output file %s : %s\n", outmfccfilename, sf_strerror (NULL)) ;
+		goto cleanup ;
+		} ;
+
 	fprintf (outfile, "# Converted from file %s.\n", infilename) ;
 	fprintf (outfile, "# Channels %d, Sample rate %d, Format %x, Frames %ld\n", sfinfo.channels, sfinfo.samplerate, sfinfo.format, sfinfo.frames) ;
 
 	ret = convert_to_text (infile, outfile, sfinfo.channels) ;
-	ret = get_fft (infile, outfftfile, outfftdfile, sfinfo.channels, sfinfo.frames) ;
+	ret = get_fft_fftd_mfcc (infile, outfftfile, outfftdfile, outmfccfile, sfinfo.channels, sfinfo.frames, sfinfo.samplerate) ;
 
 cleanup :
 

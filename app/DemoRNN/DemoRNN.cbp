@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="/media/sf_SharedUbuntu/0_Xiaoting.wav /media/sf_SharedUbuntu/0_Xiaoting.txt /media/sf_SharedUbuntu/0_Xiaoting.fft /media/sf_SharedUbuntu/0_Xiaoting.fftd" />
+				<Option parameters="/media/sf_SharedUbuntu/0_Xiaoting.wav /media/sf_SharedUbuntu/0_Xiaoting.txt /media/sf_SharedUbuntu/0_Xiaoting.fft /media/sf_SharedUbuntu/0_Xiaoting.fftd /media/sf_SharedUbuntu/0_Xiaoting.mfcc" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -32,6 +32,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add directory="../../lib/FFT_int" />
+			<Add directory="../../lib/MFCC" />
 		</Compiler>
 		<Linker>
 			<Add option="-lsndfile" />
@@ -43,6 +44,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../../lib/FFT_int/fix_fft.h" />
+		<Unit filename="../../lib/MFCC/libmfcc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../lib/MFCC/libmfcc.h" />
 		<Unit filename="src/main.cpp" />
 		<Extensions />
 	</Project>
