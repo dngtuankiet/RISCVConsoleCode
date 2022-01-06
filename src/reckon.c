@@ -19,9 +19,9 @@ void cdft(int, int, double *, int *, double *);
 #endif
 
 #ifndef NMAX
-#define NMAX 8192
-#define NMAXSQRT 64
-#define NMAXM 13
+#define NMAXM LOG2_FFT_LEN
+#define NMAX (1 << LOG2_FFT_LEN)
+#define NMAXSQRT (1 << (LOG2_FFT_LEN/2))
 #endif
 
 int reckon_start(void){
