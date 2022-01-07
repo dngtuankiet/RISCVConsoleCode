@@ -19,7 +19,7 @@ endif
 CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O1 -std=gnu11 -Wall -nostartfiles 
 CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0 
 CFLAGS+= -I $(BOOTROM_DIR)/include -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
-LFLAGS=-static -nostdlib --specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds -lc -lm
+LFLAGS=-static -nostdlib --specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
 BUILD_DIR?=$(abspath ./build)
 
 LIB_FS_O= \
@@ -45,7 +45,9 @@ LIB_FS_O= \
 	lib/codec/codec.o \
 	lib/codec/record_demo.o \
 	lib/FFT_int/fix_fft.o \
+	lib/FFT_hw/fft_hw.o \
 	lib/FFT/fft4g.o \
+	lib/MFCC/libmfcc.o \
 	libfdt/fdt.o libfdt/fdt_ro.o libfdt/fdt_wip.o libfdt/fdt_sw.o libfdt/fdt_rw.o libfdt/fdt_strerror.o libfdt/fdt_empty_tree.o \
 	libfdt/fdt_addresses.o libfdt/fdt_check.o
 
@@ -67,7 +69,7 @@ $(BUILD_DIR)/version.c:
 elf := $(BUILD_DIR)/out.elf
 $(elf): $(LIB_FS_O)
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LIB_FS_O) -lgcc -lm -lgcc
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LIB_FS_O) -lgcc -lm -lgcc -lc
 
 .PHONY: elf
 elf: $(elf)

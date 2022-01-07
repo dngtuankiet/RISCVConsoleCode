@@ -8,6 +8,7 @@ extern int tlclk_freq;
 extern unsigned long i2c_reg;
 extern unsigned long codec_reg;
 extern unsigned long fft_reg;
+extern unsigned long fftdma_reg;
 
 int reckon_start(void);
 

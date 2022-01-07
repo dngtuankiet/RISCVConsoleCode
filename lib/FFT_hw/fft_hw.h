@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 
-int fft_hw(short*, short*, int, int);
+int fft_hw(short*, short*, int, void*);
 
 #ifdef __cplusplus
 }

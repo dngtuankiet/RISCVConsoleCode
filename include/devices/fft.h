@@ -20,6 +20,6 @@
 #define FFT_STAT_READY (1UL << 0)
 #define FFT_STAT_BUSY (1UL << 1)
 
-#define LOG2_FFT_LEN 13 // TODO: Depends of core
+#define LOG2_FFT_LEN 10 // TODO: Depends of core
 
 #endif /* _RATONA_CODEC_H */

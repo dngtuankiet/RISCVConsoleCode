@@ -280,6 +280,7 @@ int timescale_freq;
 unsigned long i2c_reg = 0;
 unsigned long codec_reg = 0;
 unsigned long fft_reg = 0;
+unsigned long fftdma_reg = 0;
 
 //HART 0 runs main
 int main(int id, unsigned long dtb)
@@ -414,6 +415,20 @@ int main(int id, unsigned long dtb)
     if (err < 0) {
       kputs("\r\nCannot get reg space from '/soc/fft'");
       fft_reg = 0;
+    }
+  }
+  
+  // 9. Get the fft dma accelerator
+  nodeoffset = fdt_path_offset((void*)dtb, "/soc/fftdma");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find '/soc/fftdma'\r\nContinuing...");
+  }
+  else 
+  {
+    err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &fftdma_reg, NULL);
+    if (err < 0) {
+      kputs("\r\nCannot get reg space from '/soc/fftdma'");
+      fftdma_reg = 0;
     }
   }
   

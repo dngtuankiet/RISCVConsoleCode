@@ -1,9 +1,10 @@
 #include <platform.h>
+#include <inttypes.h>
 #define FFT_REG(i) _REG32(dev, i)
 #define FFT_REG16(i) _REG16(dev, i)
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
-int fix_fft(short fr[], short fi[], short m, void* dev)
+int fft_hw(short fr[], short fi[], short m, void* dev)
 {
   // Trigger the reset once
   FFT_REG(FFT_REG_CTRL) = FFT_CTRL_SYN_RST;
@@ -20,5 +21,6 @@ int fix_fft(short fr[], short fi[], short m, void* dev)
 	  fi[i] = FFT_REG16(FFT_REG_DATA_OUT + 2);
 	  fr[i] = FFT_REG16(FFT_REG_DATA_OUT);
   }
+  return 1;
 }
 
