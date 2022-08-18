@@ -17,7 +17,6 @@
 #include <platform.h>
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
-#include "codec/codec.h"
 
 volatile unsigned long dtb_target;
 
@@ -277,10 +276,6 @@ unsigned long plic_reg;
 int plic_max_priority;
 int plic_ndevs;
 int timescale_freq;
-unsigned long i2c_reg = 0;
-unsigned long codec_reg = 0;
-unsigned long fft_reg = 0;
-unsigned long fftdma_reg = 0;
 
 //HART 0 runs main
 int main(int id, unsigned long dtb)
@@ -378,60 +373,6 @@ int main(int id, unsigned long dtb)
               plic_max_priority);
   }
   
-  // 6. Get the i2c controller
-  nodeoffset = fdt_path_offset((void*)dtb, "/soc/i2c");
-  if (nodeoffset < 0) {
-    kputs("\r\nCannot find '/soc/i2c'\r\nAborting...");
-    while(1);
-  }
-  err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &i2c_reg, NULL);
-  if (err < 0) {
-    kputs("\r\nCannot get reg space from '/soc/i2c'\r\nAborting...");
-    while(1);
-  }
-  
-  // 7. Get the codec controller
-  nodeoffset = fdt_path_offset((void*)dtb, "/soc/codec");
-  if (nodeoffset < 0) {
-    kputs("\r\nCannot find '/soc/codec'\r\nContinuing...");
-  }
-  else 
-  {
-    err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &codec_reg, NULL);
-    if (err < 0) {
-      kputs("\r\nCannot get reg space from '/soc/codec'");
-      codec_reg = 0;
-    }
-  }
-  
-  // 8. Get the fft accelerator
-  nodeoffset = fdt_path_offset((void*)dtb, "/soc/fft");
-  if (nodeoffset < 0) {
-    kputs("\r\nCannot find '/soc/fft'\r\nContinuing...");
-  }
-  else 
-  {
-    err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &fft_reg, NULL);
-    if (err < 0) {
-      kputs("\r\nCannot get reg space from '/soc/fft'");
-      fft_reg = 0;
-    }
-  }
-  
-  // 9. Get the fft dma accelerator
-  nodeoffset = fdt_path_offset((void*)dtb, "/soc/fftdma");
-  if (nodeoffset < 0) {
-    kputs("\r\nCannot find '/soc/fftdma'\r\nContinuing...");
-  }
-  else 
-  {
-    err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &fftdma_reg, NULL);
-    if (err < 0) {
-      kputs("\r\nCannot get reg space from '/soc/fftdma'");
-      fftdma_reg = 0;
-    }
-  }
-  
   // Display some information
 #define DEQ(mon, x) ((cdate[0] == mon[0] && cdate[1] == mon[1] && cdate[2] == mon[2]) ? x : 0)
   const char *cdate = __DATE__;
@@ -513,13 +454,12 @@ int main(int id, unsigned long dtb)
 	// Pack the FDT and place the data after it
 	fdt_pack((void*)dtb_target);
 
+
+  // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
   
-  //if(codec_reg) codec_record_demo();
-  if(codec_reg) reckon_start();
-  else {
-    while(1);
-  }
+  // If finished, stay in a infinite loop
+  while(1);
 
   //dead code
   return 0;

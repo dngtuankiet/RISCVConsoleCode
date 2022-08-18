@@ -9,8 +9,6 @@
 #include "devices/plic.h"
 #include "devices/spi.h"
 #include "devices/uart.h"
-#include "devices/codec.h"
-#include "devices/fft.h"
 #include "devices/i2c.h"
 
  // Some things missing from the official encoding.h
