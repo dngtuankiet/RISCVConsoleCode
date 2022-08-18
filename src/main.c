@@ -394,7 +394,7 @@ int main(int id, unsigned long dtb)
   // Post the serial number and build info
   extern const char * gitid;
 
-  kputs("\r\nRATONA Voice Reckon:       ");
+  kputs("\r\nRATONA Demo:       ");
   kputs(date);
   kputs("-");
   kputs(__TIME__);
