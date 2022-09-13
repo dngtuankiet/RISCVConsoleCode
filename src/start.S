@@ -215,8 +215,10 @@ trap_entry:
   sw    t5,120(sp)
   sw    t6,124(sp)
 #endif
-  mv    a0,sp
+  csrr	a0, mcause
+  csrr	a1, mepc
   jal   ra, handle_trap
+  csrw  mepc, a0
 #if __riscv_xlen == 64
   ld    ra,8(sp)
   ld    gp,24(sp)
