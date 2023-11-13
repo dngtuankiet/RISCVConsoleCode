@@ -8,4 +8,6 @@ maskrom_loc.ld
 *.hex
 *.map
 build/version.c
-
+Makefile-mix-compiler
+include/user_settings_test.h
+src/main2.c
