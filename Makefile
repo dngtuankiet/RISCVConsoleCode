@@ -59,8 +59,8 @@ LIB_FS_O= \
 	libfdt/fdt.o libfdt/fdt_ro.o libfdt/fdt_wip.o libfdt/fdt_sw.o libfdt/fdt_rw.o libfdt/fdt_strerror.o libfdt/fdt_empty_tree.o \
 	libfdt/fdt_addresses.o libfdt/fdt_check.o
 
-# WOLF_O= \
-#     utils/wolf_utils.o
+WOLF_O= \
+    utils/wolf_utils.o
 
 # SRC_O= \
 # 	src/start.o \
