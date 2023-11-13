@@ -5,7 +5,7 @@
 
 #include "main.h"
 #include "encoding.h"
-#include <stdint.h>
+//#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdatomic.h>
@@ -14,9 +14,29 @@
 #include <kprintf/kprintf.h>
 #include <stdio.h>
 
+
+
 #include <platform.h>
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
+
+//Kiet custom
+#include "user_settings.h"
+#include "utils/wolf_utils.h"
+
+#include <wolfssl/options.h>
+//#include <wolfssl/wolfcrypt/settings.h>
+//#include "user_settings.h"
+#include <wolfssl/ssl.h>
+#include <wolfssl/wolfcrypt/sha256.h>
+//#include <wolfssl/openssl/ec.h>
+
+#include <wolfssl/wolfcrypt/ecc.h>
+#include <wolfssl/wolfcrypt/random.h>
+#include <wolfssl/wolfcrypt/sp_int.h>
+#include <wolfssl/wolfcrypt/integer.h>
+#include <wolfssl/wolfcrypt/wolfmath.h>
+
 
 volatile unsigned long dtb_target;
 
@@ -28,6 +48,28 @@ function_ptr_t g_time_interrupt_handler = no_interrupt_handler;
 plic_instance_t g_plic;// Instance data for the PLIC.
 
 #define RTC_FREQ 1000000 // TODO: This is now extracted
+
+void my_bio_dump_line(uint32_t cnt, unsigned char* s, int len){
+  kputs("\r");
+  uart_put_hex((void*) uart_reg, cnt*16);
+  kputs(" - ");
+  for(int i = 0; i < len; i++){
+      uart_put_hex_1b((void*) uart_reg, (uint8_t) s[i]);
+  }
+  kprintf("\n");
+}
+
+void my_bio_dump(unsigned char* s, int len){
+  int cnt = len/16;
+  for (int line = 0; line <cnt; line++){
+      my_bio_dump_line(line, s+line*16, 16);
+  }
+  int mod = len %(cnt*16);
+  if(mod != 0){
+      my_bio_dump_line(cnt+1, s+cnt*16,mod);
+  }
+}
+
 
 void boot_fail(long code, int trap)
 {
@@ -44,6 +86,7 @@ void handle_m_ext_interrupt(){
     g_ext_interrupt_handlers[int_num]();
   }
   else {
+    kputs("\rhandle_m_ext_interrupt\r\n");
     boot_fail((long) read_csr(mcause), 1);
     asm volatile ("nop");
     asm volatile ("nop");
@@ -81,6 +124,7 @@ uintptr_t handle_trap(uintptr_t mcause, uintptr_t epc)
     handle_m_time_interrupt();
   }
   else {
+    kputs("\rhandle_trap\r\n");
     boot_fail((long) read_csr(mcause), 1);
     asm volatile ("nop");
     asm volatile ("nop");
@@ -456,9 +500,74 @@ int main(int id, unsigned long dtb)
 
 
   // TODO: From this point, insert any code
-  kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
-  
+  kputs("\r\n\n\nWelcome Kiet!\r\n\n");
+  kputs("\rTest Program with WolfSSl baremetal\r\n\n");
   // If finished, stay in a infinite loop
+
+//   char demo[3] = "abc";
+//   char* test = (char*)malloc(sizeof(char)*4);
+//   memcpy(test,demo,3);
+//  *(test+4) = '\n';
+//    kputs(test);
+
+  kputs("Test sha256\n");
+
+  Sha256 sha256;
+  byte data[] = {0x61,0x62,0x63};
+  byte result[32];
+  word32 data_len = sizeof(data);
+  int ret;
+
+  if ((ret = wc_InitSha256(&sha256)) != 0) {
+//          WOLFSSL_MSG("wc_InitSha256 failed");
+      kputs("\rError init sha256!");
+  }
+  else {
+    wc_Sha256Update(&sha256, data, data_len);
+//    kputs("\rcomplete update\r\n");
+    wc_Sha256Final(&sha256, result); //result finished here
+//    kputs("\rcomplete final\r\n");
+    wc_Sha256Free(&sha256); //free allocated
+//    kputs("\rcomplete free\r\n");
+  }
+
+    my_bio_dump(result, 32);
+    kputs("\r\ncomplete hash test \n");
+
+
+
+
+
+//    ecc_key key;
+//    wc_ecc_init(&key);
+//    WC_RNG rng;
+//    wc_InitRng(&rng);
+//    int curveID = ECC_SECP256K1;
+//    int keySize = wc_ecc_get_curve_size_from_id(curveID);
+//    ret = wc_ecc_make_key_ex(&rng, keySize, &key, curveID);
+//    if(ret != MP_OKAY){
+//        kputs("\r\nError gen key \n");
+//    }
+//
+//    ret = wc_ecc_check_key(&key);
+//    if(ret != MP_OKAY){
+//        kputs("\r\nServer key gen failed\n");
+//
+//    }else{
+//        kputs("\r\nServer key gen success\n");
+//    }
+
+
+    user U;
+    server S;
+    WOLFSSL_EC_GROUP *group = wolfSSL_EC_GROUP_new_by_curve_name(NID_secp256k1);
+
+    byte UID[3] = "abc";
+    U.UID = UID;
+    U.key = EC_KEY_new();
+    wolfSSL_EC_KEY_set_group(U.key, group);
+
+    kputs("\r\ncomplete test library\n");
   while(1);
 
   //dead code
