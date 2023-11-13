@@ -20,13 +20,13 @@
 extern void kputc(char);
 extern void kputs(const char *);
 extern void kprintf(const char *, ...);
-
-#ifdef DEBUG
-#define dprintf(s, ...)	kprintf((s), ##__VA_ARGS__)
-#define dputs(s)	kputs((s))
-#else
-#define dprintf(s, ...) do { } while (0)
-#define dputs(s)	do { } while (0)
-#endif
+extern void kputh(char c);
+//#ifdef DEBUG
+//#define dprintf(s, ...)	kprintf((s), ##__VA_ARGS__)
+//#define dputs(s)	kputs((s))
+//#else
+//#define dprintf(s, ...) do { } while (0)
+//#define dputs(s)	do { } while (0)
+//#endif
 
 #endif /* _SDBOOT_KPRINTF_H */

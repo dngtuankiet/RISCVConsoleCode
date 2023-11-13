@@ -12,6 +12,11 @@ inline void kputc(char c)
 	uart_putc((void*) uart_reg, c);
 }
 
+//inline void kputh(char c)
+//{
+//    uart_put_hex_1b((void*) uart_reg, c);
+//}
+
 static inline void _kputs(const char *s)
 {
 	char c;
