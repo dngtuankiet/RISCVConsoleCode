@@ -2,9 +2,11 @@ BOOTROM_DIR?=$(abspath .)
 
 #Kiet custom
 # WOLFSSL_DIR = /home/tuankiet/Documents/tools/wolfssl-build-riscv32
-WOLFSSL_DIR = /home/tuankiet/Documents/tools/wolfssl-build-rv32imac-elf
+#WOLFSSL_DIR = /home/tuankiet/tools/wolfssl-build-rv32imac-elf
+WOLFSSL_DIR = /home/tuankiet/tools/wolfssl-build-rv64gc-elf
+
 LIB_WOLFSSL = $(WOLFSSL_DIR)/lib/libwolfssl.a
-LIB_HTIF = $(RISCV)/riscv32-unknown-elf/lib/libgloss_htif.a
+#LIB_HTIF = $(RISCV)/riscv64-unknown-elf/lib/libgloss_htif.a
 # LIB_RISCV =  -L$(RISCV)/sysroot/lib -L$(RISCV)/sysroot/usr/lib -L$(RISCV)/lib -L$(RISCV)/riscv32-unknown-elf/lib
 LIB_RISCV =  -L$(RISCV)/lib
 
@@ -12,10 +14,11 @@ LIB_RISCV =  -L$(RISCV)/lib
 INCLUDE = -I$(WOLFSSL_DIR)/include -I$(RISCV)/include -I./include
 
 ISACONF?=RV32IMAC
-CROSSCOMPILE?=riscv32-unknown-elf
+#CROSSCOMPILE?=riscv32-unknown-elf
+CROSSCOMPILE?=riscv64-unknown-elf
 
-CC=riscv32-unknown-elf-gcc
-CC_LINUX = riscv32-unknown-linux-gnu-gcc
+CC=riscv64-unknown-elf-gcc
+#CC_LINUX = riscv32-unknown-linux-gnu-gcc
 CCX=$(CROSSCOMPILE)-g++
 OBJCOPY=$(CROSSCOMPILE)-objcopy
 OBJDUMP=$(CROSSCOMPILE)-objdump
@@ -30,14 +33,24 @@ CFLAGS_ARCH=-march=rv32i -mabi=ilp32
 endif
 
 # CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall
-CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffreestanding --specs=htif.specs
-CFLAGS+= -DWOLFSSL_USER_SETTINGS -DWOLFSSL_NO_MALLOC
-CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0
-CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
 # LFLAGS=-static --specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
 # LFLAGS= -static -nostdlib -nostartfiles --specs=htif.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
-LFLAGS= -static -nostdlib -nostartfiles -specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
+
+#CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffreestanding --specs=htif.specs
+#CFLAGS+= -DWOLFSSL_USER_SETTINGS -DWOLFSSL_NO_MALLOC
+#CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0
+#CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
+#LFLAGS= -static -nostdlib -nostartfiles -specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
+
+CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffreestanding --specs=nano.specs
+CFLAGS+= -DWOLFSSL_USER_SETTINGS
+CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0
+CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
+LFLAGS= -static -nostartfiles -specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
+
 BUILD_DIR?=$(abspath ./build)
+
+
 
 LIB_FS_O= \
 	uart/uart.o \
@@ -98,7 +111,7 @@ $(BUILD_DIR)/version.c:
 elfkiet := $(BUILD_DIR)/out.elf
 $(elfkiet): $(LIB_FS_O) $(SRC_O)
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(LFLAGS) -o $@  $(SRC_O) $(LIB_FS_O)  $(LIB_RISCV)  $(LIB_WOLFSSL) $(LIB_HTIF) -lm -lc -lgcc -lgloss
+	$(CC) $(CFLAGS_ARCH) $(LFLAGS) -o $@  $(SRC_O) $(LIB_FS_O)  $(LIB_RISCV)  $(LIB_WOLFSSL) $(LIB_HTIF) -lm -lc -lgcc -lgloss
 
 .PHONY: elfkiet
 elfkiet: $(elfkiet)

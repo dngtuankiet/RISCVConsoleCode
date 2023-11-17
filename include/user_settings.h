@@ -46,7 +46,7 @@ extern "C" {
 #define SINGLE_THREADED
 
 #undef  WOLFSSL_SMALL_STACK
-#define WOLFSSL_SMALL_STACK
+//#define WOLFSSL_SMALL_STACK
 
 #undef  WOLFSSL_USER_IO
 #define WOLFSSL_USER_IO
@@ -408,7 +408,7 @@ extern "C" {
 #endif
 
 /* Static memory */
-#if 0
+#if 1
     /* Static memory requires fast math */
     #define WOLFSSL_STATIC_MEMORY
 
@@ -497,7 +497,7 @@ extern "C" {
 //#define HAVE_COMP_KEY
 
 #undef  HAVE_TLS_EXTENSIONS
-#define HAVE_TLS_EXTENSIONS
+//#define HAVE_TLS_EXTENSIONS
 
 #undef  HAVE_SUPPORTED_CURVES
 #define HAVE_SUPPORTED_CURVES
