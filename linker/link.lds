@@ -12,6 +12,7 @@ SECTIONS
 {
   PROVIDE(_ram = ORIGIN(memory_mem));
   PROVIDE(_ram_end = _ram + LENGTH(memory_mem));
+  PROVIDE(__stack_size = 0x1000);
 
   .text ALIGN((ORIGIN(memory_mem) + 0x0), 8) : AT(ALIGN((ORIGIN(memory_mem) + 0x0), 8)) {
     PROVIDE(_ftext = .);
@@ -72,6 +73,6 @@ SECTIONS
 
   /* This section is a noop and is only used for the ASSERT */
   .stack : {
-    ASSERT(_sp >= (_ebss + 4096), "Error: No room left for the heap and stack");
+    ASSERT(_sp >= (_ebss + __stack_size), "Error: No room left for the heap and stack");
   }
 }
