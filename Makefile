@@ -42,11 +42,11 @@ endif
 #CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
 #LFLAGS= -static -nostdlib -nostartfiles -specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
 
-CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffreestanding --specs=nano.specs
+CFLAGS=$(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffreestanding --specs=htif.specs
 CFLAGS+= -DWOLFSSL_USER_SETTINGS
 CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0
 CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
-LFLAGS= -static -nostartfiles -specs=nosys.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T link.lds
+LFLAGS= -static -nostartfiles -specs=htif.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T kiet.lds
 
 BUILD_DIR?=$(abspath ./build)
 
