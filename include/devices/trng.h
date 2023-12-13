@@ -9,7 +9,8 @@
 
 #define TRNG_RESET (0x1<<8)
 #define TRNG_ENABLE (0x1<<0)
-#define TRNG_VALID_BIT (0x1<<8)
-#define TRNG_READY_BIT (0x1<<0)
+#define TRNG_NEXT (0x1<<1)
+
+#define TRNG_VALID_BIT (0x1<<0)
 
 #endif /* _HANKEN_TRNG_H */

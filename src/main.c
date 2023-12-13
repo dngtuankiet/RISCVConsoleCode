@@ -500,8 +500,18 @@ int main(int id, unsigned long dtb)
   int rand = _REG32(trng_reg, TRNG_RANDOM);
   kprintf("random number 1: %d \n", rand);
 
-  int i = 0;
-  for(i =0; i<32;i=i+1){} //delay time
+  //next value trigger
+  kprintf("control: %d \n", reg);
+  _REG32(trng_reg, TRNG_CONTROL) = _REG32(trng_reg, TRNG_CONTROL) | TRNG_NEXT;
+  reg = _REG32(trng_reg, TRNG_CONTROL);
+  kprintf("control: %d \n", reg);
+
+  kprintf("start waiting next\n");
+  while(!((_REG32(trng_reg, TRNG_STATUS) & TRNG_VALID_BIT) == TRNG_VALID_BIT)){
+    reg = _REG32(trng_reg, TRNG_STATUS);
+//    kprintf("status: %d\n", reg);
+  }
+  kprintf("next finished\n");
 
   rand = _REG32(trng_reg, TRNG_RANDOM);
   kprintf("random number 2: %d \n", rand);
