@@ -6,17 +6,18 @@
 #include "main.h"
 #include "encoding.h"
 #include <stdint.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <string.h>
-#include <stdatomic.h>
+//#include <stdatomic.h>
 #include "libfdt/libfdt.h"
 #include "uart/uart.h"
 #include <kprintf/kprintf.h>
-#include <stdio.h>
-
-#include <platform.h>
+//#include <stdio.h>
+//
+#include <platform.h> //this calls devices/headers
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
+
 
 volatile unsigned long dtb_target;
 
@@ -270,6 +271,7 @@ int fdt_find_or_add_subnode(void *fdt, int parentoffset, const char *name)
 int timescale_freq = 0;
 
 // Register to extract
+unsigned long trng_reg = 0;
 unsigned long uart_reg = 0;
 int tlclk_freq;
 unsigned long plic_reg;
@@ -285,7 +287,7 @@ int main(int id, unsigned long dtb)
   int err = 0;
   int len;
 	const fdt32_t *val;
-  
+
   // 1. Get the uart reg
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/serial");
   if (nodeoffset < 0) while(1);
@@ -454,10 +456,59 @@ int main(int id, unsigned long dtb)
 	// Pack the FDT and place the data after it
 	fdt_pack((void*)dtb_target);
 
+  // custom peripheral get reg values
+  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,trng0");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find a node with compatible 'console,trng0'\r\nAborting...");
+    while(1);
+  }
+  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &trng_reg, NULL);
+  if(err < 0){
+    kputs("\r\nCannot get reg space from compatible 'console,trng0'\r\nAborting...");
+    while(1);
+  }
+
 
   // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
-  
+  int reg = 0;
+
+  //reset module
+  _REG32(trng_reg, TRNG_CONTROL) = TRNG_RESET;
+  _REG32(trng_reg, TRNG_CONTROL) = 0x0;
+
+
+  //write calibration time
+  kprintf("delay: %d \n", reg);
+  _REG32(trng_reg, TRNG_DELAY) = (0x1 << 11);
+  reg = _REG32(trng_reg, TRNG_DELAY);
+  kprintf("delay: %d \n", reg);
+
+  //enable module
+  kprintf("control: %d \n", reg);
+  _REG32(trng_reg, TRNG_CONTROL) = _REG32(trng_reg, TRNG_CONTROL) | TRNG_ENABLE;
+  reg = _REG32(trng_reg, TRNG_CONTROL);
+  kprintf("control: %d \n", reg);
+
+  kprintf("start waiting calibration\n");
+  while(!((_REG32(trng_reg, TRNG_STATUS) & TRNG_VALID_BIT) == TRNG_VALID_BIT)){
+    reg = _REG32(trng_reg, TRNG_STATUS);
+//    kprintf("status: %d\n", reg);
+  }
+  kprintf("calibration finished\n");
+
+  int rand = _REG32(trng_reg, TRNG_RANDOM);
+  kprintf("random number 1: %d \n", rand);
+
+  int i = 0;
+  for(i =0; i<32;i=i+1){} //delay time
+
+  rand = _REG32(trng_reg, TRNG_RANDOM);
+  kprintf("random number 2: %d \n", rand);
+
+  //reset module and disable
+  _REG32(trng_reg, TRNG_CONTROL) = TRNG_RESET & (~TRNG_ENABLE);
+
   // If finished, stay in a infinite loop
   while(1);
 
