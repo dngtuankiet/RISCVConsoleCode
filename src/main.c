@@ -11,6 +11,7 @@
 //#include <stdatomic.h>
 #include "libfdt/libfdt.h"
 #include "uart/uart.h"
+#include "trng/trng.h"
 #include <kprintf/kprintf.h>
 //#include <stdio.h>
 //
@@ -471,53 +472,25 @@ int main(int id, unsigned long dtb)
 
   // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
-  int reg = 0;
+  int status = 0;
+  uint32_t rand = 0;
 
-  //reset module
-  _REG32(trng_reg, TRNG_CONTROL) = TRNG_RESET;
-  _REG32(trng_reg, TRNG_CONTROL) = 0x0;
-
-
-  //write calibration time
-  kprintf("delay: %d \n", reg);
-  _REG32(trng_reg, TRNG_DELAY) = (0x1 << 11);
-  reg = _REG32(trng_reg, TRNG_DELAY);
-  kprintf("delay: %d \n", reg);
-
-  //enable module
-  kprintf("control: %d \n", reg);
-  _REG32(trng_reg, TRNG_CONTROL) = _REG32(trng_reg, TRNG_CONTROL) | TRNG_ENABLE;
-  reg = _REG32(trng_reg, TRNG_CONTROL);
-  kprintf("control: %d \n", reg);
-
-  kprintf("start waiting calibration\n");
-  while(!((_REG32(trng_reg, TRNG_STATUS) & TRNG_VALID_BIT) == TRNG_VALID_BIT)){
-    reg = _REG32(trng_reg, TRNG_STATUS);
-//    kprintf("status: %d\n", reg);
+  status = trng_setup((void*)trng_reg, (0x1 << 11));
+  if((status == TRNG_ERROR_WAIT) || (status == TRNG_ERROR_RANDOM)){
+    kprintf("Error setup trng\n");
+  }else{
+    for(int i = 0; i < 10; i++){
+      rand = trng_get_random((void*)trng_reg);
+      if(rand == TRNG_ERROR_RANDOM){
+        kprintf("Errot gen random\n");
+        break;
+      }
+      kprintf("random number %d: %d \n",i, rand);
+    }
   }
-  kprintf("calibration finished\n");
+  trng_reset_disable((void*)trng_reg);
 
-  int rand = _REG32(trng_reg, TRNG_RANDOM);
-  kprintf("random number 1: %d \n", rand);
-
-  //next value trigger
-  kprintf("control: %d \n", reg);
-  _REG32(trng_reg, TRNG_CONTROL) = _REG32(trng_reg, TRNG_CONTROL) | TRNG_NEXT;
-  reg = _REG32(trng_reg, TRNG_CONTROL);
-  kprintf("control: %d \n", reg);
-
-  kprintf("start waiting next\n");
-  while(!((_REG32(trng_reg, TRNG_STATUS) & TRNG_VALID_BIT) == TRNG_VALID_BIT)){
-    reg = _REG32(trng_reg, TRNG_STATUS);
-//    kprintf("status: %d\n", reg);
-  }
-  kprintf("next finished\n");
-
-  rand = _REG32(trng_reg, TRNG_RANDOM);
-  kprintf("random number 2: %d \n", rand);
-
-  //reset module and disable
-  _REG32(trng_reg, TRNG_CONTROL) = TRNG_RESET & (~TRNG_ENABLE);
+  
 
   // If finished, stay in a infinite loop
   while(1);
