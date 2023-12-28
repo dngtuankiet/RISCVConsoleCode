@@ -54,6 +54,7 @@ BUILD_DIR?=$(abspath ./build)
 
 LIB_FS_O= \
 	uart/uart.o \
+	trng/trng.o \
 	$(BUILD_DIR)/version.o \
 	clkutils/clkutils.o \
 	kprintf/kprintf.o \

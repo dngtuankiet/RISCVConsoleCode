@@ -5,38 +5,20 @@
 
 #include "main.h"
 #include "encoding.h"
-//#include <stdint.h>
-#include <stdlib.h>
+#include <stdint.h>
+//#include <stdlib.h>
 #include <string.h>
-#include <stdatomic.h>
+//#include <stdatomic.h>
 #include "libfdt/libfdt.h"
 #include "uart/uart.h"
+#include "trng/trng.h"
 #include <kprintf/kprintf.h>
-#include <stdio.h>
-
-
-
-#include <platform.h>
+//#include <stdio.h>
+//
+#include <platform.h> //this calls devices/headers
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
 
-//Kiet custom
-#include "user_settings.h"
-#include "utils/wolf_utils.h"
-//#include <wolfssl/wolfcrypt/settings.h>
-
-//#include <wolfssl/ssl.h>
-//#include <wolfssl/wolfcrypt/sha256.h>
-#include <wolfssl/wolfcrypt/ecc.h>
-#include <wolfssl/openssl/ec.h>
-//#include <wolfssl/wolfcrypt/random.h>
-//#include <wolfssl/wolfcrypt/sp_int.h>
-//#include <wolfssl/wolfcrypt/integer.h>
-//#include <wolfssl/wolfcrypt/wolfmath.h>
-
-#define ECQV_CURVE ECC_SECP256K1
-#define KEYSIZE 32
-#define STATIC_MEM_SIZE (200*1024)
 
 volatile unsigned long dtb_target;
 
@@ -330,6 +312,7 @@ int fdt_find_or_add_subnode(void *fdt, int parentoffset, const char *name)
 int timescale_freq = 0;
 
 // Register to extract
+unsigned long trng_reg = 0;
 unsigned long uart_reg = 0;
 int tlclk_freq;
 unsigned long plic_reg;
@@ -514,30 +497,40 @@ int main(int id, unsigned long dtb)
 	// Pack the FDT and place the data after it
 	fdt_pack((void*)dtb_target);
 
+  // custom peripheral get reg values
+  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,trng0");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find a node with compatible 'console,trng0'\r\nAborting...");
+    while(1);
+  }
+  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &trng_reg, NULL);
+  if(err < 0){
+    kputs("\r\nCannot get reg space from compatible 'console,trng0'\r\nAborting...");
+    while(1);
+  }
+
 
   // TODO: From this point, insert any code
-  kputs("\r\n\n\nWelcome Kiet!\r\n\n");
-//  char demo[3] = "abc";
-//  char test[3];
-////  char* test = (char*)malloc(sizeof(char)*4);
-//  memcpy(test,demo,3);
-//  *(test+4) = '\n';
-//  kputs(test);
-//  kputs("Test memcpy\n");
-//  int r = memcmp(test,demo,3);
-//  if(r == 0){
-//    kputs("Identical mem\n");
-//  }else{
-//    kputs("Non-identical mem\n");
-//  }
+  kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
+  int status = 0;
+  uint32_t rand = 0;
 
+  status = trng_setup((void*)trng_reg, (0x1 << 11));
+  if((status == TRNG_ERROR_WAIT) || (status == TRNG_ERROR_RANDOM)){
+    kprintf("Error setup trng\n");
+  }else{
+    for(int i = 0; i < 10; i++){
+      rand = trng_get_random((void*)trng_reg);
+      if(rand == TRNG_ERROR_RANDOM){
+        kprintf("Errot gen random\n");
+        break;
+      }
+      kprintf("random number %d: %d \n",i, rand);
+    }
+  }
+  trng_reset_disable((void*)trng_reg);
 
-//  int testNum = 1997;
-//  int cpNum;
-//  memcpy((void*)cpNum, (void*)testNum, 4);
-//  kputs("\r\nTest memcpy (should be 1997): ");
-//  uart_put_dec((void*)uart_reg, cpNum);
-
+  
 
   // If finished, stay in a infinite loop
   kputs("\rTest Program with WolfSSl baremetal\r\n\n");
