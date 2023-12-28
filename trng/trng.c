@@ -1,5 +1,11 @@
 #include <platform.h>
 #include "trng.h"
+#include "user_settings.h"
+#include "main.h"
+
+unsigned int my_rng_seed_gen(void){
+    return trng_get_random((void*)trng_reg);
+}
 
 void trng_reset(void* trngctrl){
   //reset high, reset both ring generator and ring oscillator
@@ -7,8 +13,18 @@ void trng_reset(void* trngctrl){
 }
 
 void trng_reset_disable(void* trngctrl){
-    _REG32((char*)trngctrl, TRNG_CONTROL) = TRNG_RESET & (~TRNG_ENABLE);
+    _REG32((char*)trngctrl, TRNG_CONTROL) = TRNG_RESET_AND_DISABLE_MODE;
 }
+
+void trng_disable_mode(void* trngctrl){
+    _REG32((char*)trngctrl, TRNG_CONTROL) = TRNG_DISABLE_MODE;
+}
+
+void trng_enable_mode(void* trngctrl){
+    _REG32((char*)trngctrl, TRNG_CONTROL) = TRNG_ENABLE_MODE;
+}
+
+
 /**
  * Setup trng
  * Input: delay time (number of cycles, default: 2^11)
@@ -27,7 +43,8 @@ int trng_setup(void* trngctrl, uint32_t delay){
     #endif //TRNG_DEBUG
 
     //enable module
-    _REG32((char*)trngctrl, TRNG_CONTROL) = _REG32((char*)trngctrl, TRNG_CONTROL) | TRNG_ENABLE;
+    // _REG32((char*)trngctrl, TRNG_CONTROL) = _REG32((char*)trngctrl, TRNG_CONTROL) | TRNG_ENABLE;
+    trng_enable_mode(trngctrl);
     #ifdef TRNG_DEBUG
     reg = _REG32(trngctrl, TRNG_CONTROL);
     kprintf("TRNG-set control: %d \n", reg);
@@ -55,9 +72,13 @@ int trng_setup(void* trngctrl, uint32_t delay){
         kprintf("TRNG-error gen random number\n");
         return TRNG_ERROR_RANDOM;
     }
+    
+    trng_disable_mode(trngctrl);
 }
 
 uint32_t trng_get_random(void* trngctrl){
+    trng_enable_mode(trngctrl);
+
     uint32_t reg = 0;
     uint32_t rand = 0;
     _REG32((char*)trngctrl, TRNG_CONTROL) = _REG32((char*)trngctrl, TRNG_CONTROL) & (~TRNG_NEXT);

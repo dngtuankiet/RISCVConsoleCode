@@ -11,6 +11,10 @@
 #define TRNG_ENABLE (0x1<<0)
 #define TRNG_NEXT (0x1<<1)
 
+#define TRNG_DISABLE_MODE (0x0)
+#define TRNG_ENABLE_MODE (((~TRNG_RESET) & (~TRNG_NEXT)) | TRNG_ENABLE)
+#define TRNG_RESET_AND_DISABLE_MODE TRNG_RESET
+
 #define TRNG_VALID_BIT (0x1<<0)
 
 #endif /* _HANKEN_TRNG_H */

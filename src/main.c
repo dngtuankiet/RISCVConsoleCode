@@ -19,6 +19,16 @@
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
 
+//Kiet custom
+#include "user_settings.h"
+#include "utils/wolf_utils.h"
+#include <wolfssl/wolfcrypt/ecc.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
+// #include <wolfssl/openssl/ec.h>
+
+#define ECQV_CURVE ECC_SECP256K1
+#define KEYSIZE 32
+#define STATIC_MEM_SIZE (200*1024)
 
 volatile unsigned long dtb_target;
 
@@ -32,10 +42,10 @@ plic_instance_t g_plic;// Instance data for the PLIC.
 #define RTC_FREQ 1000000 // TODO: This is now extracted
 
 #ifdef WOLFSSL_STATIC_MEMORY
-//    static WOLFSSL_HEAP_HINT* HEAP_HINT_TEST;
+//    static WOLFSSL_HEAP_HINT* HEAP_HINT;
     static byte gTestMemory[STATIC_MEM_SIZE];
 //#else
-//    #define HEAP_HINT_TEST NULL
+//    #define HEAP_HINT NULL
 #endif
 
 typedef struct ecc_spec{
@@ -528,15 +538,15 @@ int main(int id, unsigned long dtb)
       kprintf("random number %d: %d \n",i, rand);
     }
   }
-  trng_reset_disable((void*)trng_reg);
+  // trng_reset_disable((void*)trng_reg);
 
   
 
   // If finished, stay in a infinite loop
   kputs("\rTest Program with WolfSSl baremetal\r\n\n");
   #ifdef WOLFSSL_STATIC_MEMORY
-    WOLFSSL_HEAP_HINT* HEAP_HINT_TEST = NULL;
-    if(wc_LoadStaticMemory(&HEAP_HINT_TEST, gTestMemory, sizeof(gTestMemory), WOLFMEM_GENERAL, 1) != 0){
+    WOLFSSL_HEAP_HINT* HEAP_HINT = NULL;
+    if(wc_LoadStaticMemory(&HEAP_HINT, gTestMemory, sizeof(gTestMemory), WOLFMEM_GENERAL, 1) != 0){
       kputs("\rUnable to load static memory\n");
       while(1);
     }else{
@@ -593,13 +603,21 @@ wolfCrypt_Init();
     }
     kputs("\rInit key OK\n");
 
-    ret = wc_InitRng_ex(&rng, HEAP_HINT_TEST, INVALID_DEVID);
+    ret = wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID);
 //    ret = wc_InitRng(&rng);
     if(ret != MP_OKAY){
       kputs("\rInit RNG failed\n");
+      if(ret == DRBG_CONT_FIPS_E){
+        kprintf("rng DRBG_CONT_FIPS_E\n");
+      }else if(ret == RNG_FAILURE_E){
+        kprintf("rng RNG_FAILURE_E\n");
+      }else{
+        kprintf("rng other\n");
+      }
+
       goto end;
     }
-    kputs("\rInit RGN OK\n");
+    kputs("\rInit RNG OK\n");
 
     kputs("\rInitialzied completed\n");
     ret = wc_ecc_set_curve(&key, KEYSIZE, ECQV_CURVE);
@@ -654,7 +672,7 @@ wolfCrypt_Init();
 
 end:
   kputs("\r\nComplete test library\n");
-wolfCrypt_Cleanup();
+  wolfCrypt_Cleanup();
   while(1);
 
   //dead code
