@@ -28,6 +28,13 @@
 extern "C" {
 #endif
 
+//Kiet custom
+#define WOLFSSL_NO_SOCK
+#define HAVE_ECC_KOBLITZ
+#define WOLFSSL_PUBLIC_ECC_ADD_DBL
+#define WOLFSSL_PUBLIC_MP
+#define NO_ERROR_STRINGS
+
 /* ------------------------------------------------------------------------- */
 /* SiFive HiFive */
 /* ------------------------------------------------------------------------- */
@@ -359,16 +366,16 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 /* Use reduced benchmark / test sizes */
 #undef  BENCH_EMBEDDED
-#define BENCH_EMBEDDED
+// #define BENCH_EMBEDDED
 
 #undef  USE_CERT_BUFFERS_2048
-#define USE_CERT_BUFFERS_2048
+// #define USE_CERT_BUFFERS_2048
 
 #undef  USE_CERT_BUFFERS_1024
 //#define USE_CERT_BUFFERS_1024
 
 #undef  USE_CERT_BUFFERS_256
-#define USE_CERT_BUFFERS_256
+// #define USE_CERT_BUFFERS_256
 
 
 /* ------------------------------------------------------------------------- */
@@ -410,9 +417,11 @@ extern "C" {
 /* Static memory */
 #if 1
     /* Static memory requires fast math */
+    #undef WOLFSSL_STATIC_MEMORY
     #define WOLFSSL_STATIC_MEMORY
 
     /* Disable fallback malloc/free */
+    #undef WOLFSSL_NO_MALLOC
     #define WOLFSSL_NO_MALLOC
     #if 1
         #define WOLFSSL_MALLOC_CHECK /* trap malloc failure */
@@ -464,6 +473,7 @@ extern "C" {
     #undef  CUSTOM_RAND_GENERATE_BLOCK
     #define CUSTOM_RAND_GENERATE_BLOCK  my_rng_gen_block
 #else
+    #undef HAVE_HASHDRBG
     #define HAVE_HASHDRBG
 
     /* Seed Source */
@@ -488,7 +498,7 @@ extern "C" {
 #endif
 
 /* reduce DH test time */
-#define WOLFSSL_OLD_PRIME_CHECK
+// #define WOLFSSL_OLD_PRIME_CHECK
 
 #undef  KEEP_PEER_CERT
 //#define KEEP_PEER_CERT
@@ -588,6 +598,8 @@ extern "C" {
 
 #undef  NO_SIG_WRAPPER
 //#define NO_SIG_WRAPPER
+
+
 
 #ifdef __cplusplus
 }
