@@ -21,7 +21,7 @@
 
 //Kiet custom
 #include "user_settings.h"
-#include "utils/wolf_utils.h"
+// #include "utils/wolf_utils.h"
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 // #include <wolfssl/openssl/ec.h>
@@ -553,7 +553,7 @@ int main(int id, unsigned long dtb)
       kputs("\rSuccessfully load static memory\n");
     }
   #endif
-wolfCrypt_Init();
+  wolfCrypt_Init();
 
   /*==========================*/
   kputs("\nTest sha256\n");
@@ -591,7 +591,7 @@ wolfCrypt_Init();
     mp_read_radix(&(curve.order), curve.spec->order, 16); //convert const char* to big number base 16
     mp_read_radix(&(curve.af), curve.spec->Af, 16); //convert const char* to big number base 16
     mp_read_radix(&(curve.prime), curve.spec->prime, 16); //convert const char* to big number base 16
-    wc_ecc_get_generator(curve.G, curve.idx);
+    // wc_ecc_get_generator(curve.G, curve.idx); //require --enable-opensslall to work
 
     kputs("\r\n\n2. Generate keys from curve specs\n");
     ecc_key key;
@@ -612,7 +612,7 @@ wolfCrypt_Init();
       }else if(ret == RNG_FAILURE_E){
         kprintf("rng RNG_FAILURE_E\n");
       }else{
-        kprintf("rng other\n");
+        kprintf("rng stop at %d\n", ret);
       }
 
       goto end;
