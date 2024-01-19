@@ -3,7 +3,7 @@ BOOTROM_DIR?=$(abspath .)
 #Kiet custom
 # WOLFSSL_DIR = /home/tuankiet/Documents/tools/wolfssl-build-riscv32
 #WOLFSSL_DIR = /home/tuankiet/tools/wolfssl-build-rv32imac-elf
-WOLFSSL_DIR = /home/tuankiet/tools/wolfssl-build-rv64gc-elf
+WOLFSSL_DIR = /home/tuankiet/Documents/wolfssl-build-rv64gc-elf
 
 LIB_WOLFSSL = $(WOLFSSL_DIR)/lib/libwolfssl.a
 #LIB_HTIF = $(RISCV)/riscv64-unknown-elf/lib/libgloss_htif.a
@@ -76,13 +76,15 @@ LIB_FS_O= \
 WOLF_O= \
     utils/wolf_utils.o
 
+WOLFCRYPT_O=utils/wc_func.o
+
 # SRC_O= \
 # 	src/start.o \
 # 	src/main.o
 
 SRC_O= \
     src/start.o \
-	src/main.o
+	src/secure-main.o
 
 $(BUILD_DIR)/version.c:
 	mkdir -p $(BUILD_DIR)
@@ -110,9 +112,9 @@ $(BUILD_DIR)/version.c:
 
 # $(WOLF_O)
 elfkiet := $(BUILD_DIR)/out.elf
-$(elfkiet): $(LIB_FS_O) $(SRC_O)
+$(elfkiet): $(LIB_FS_O) $(WOLFCRYPT_O) $(SRC_O)
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS_ARCH) $(LFLAGS) -o $@  $(SRC_O) $(LIB_FS_O)  $(LIB_RISCV)  $(LIB_WOLFSSL) $(LIB_HTIF) -lm -lc -lgcc -lgloss
+	$(CC) $(CFLAGS_ARCH) $(LFLAGS) -o $@  $(SRC_O) $(WOLFCRYPT_O) $(LIB_FS_O)  $(LIB_RISCV)  $(LIB_WOLFSSL) $(LIB_HTIF) -lm -lc -lgcc -lgloss
 
 .PHONY: elfkiet
 elfkiet: $(elfkiet)
@@ -142,7 +144,7 @@ hex: $(hex)
 
 .PHONY: clean
 clean::
-	rm -rf $(hex) $(elf) $(src_elf) src/main.o $(WOLF_O)
+	rm -rf $(hex) $(elf) $(src_elf) src/main.o $(WOLF_O) $(WOLFCRYPT_O)
 
 .PHONY: clean
 clean_full::
