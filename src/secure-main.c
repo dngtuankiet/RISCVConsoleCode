@@ -5,15 +5,16 @@
 
 #include "main.h"
 #include "encoding.h"
-//#include <stdint.h>
-#include <stdlib.h>
+#include <stdint.h>
+// #include <stdlib.h>
 #include <string.h>
-#include <stdatomic.h>
+// #include <stdatomic.h>
 #include "libfdt/libfdt.h"
 #include "uart/uart.h"
+#include "trng/trng.h"
 #include <kprintf/kprintf.h>
-#include <stdio.h>
-
+// #include <stdio.h>
+#include "utils/wc_func.h"
 
 
 #include <platform.h>
@@ -22,17 +23,9 @@
 
 //Kiet custom
 #include "user_settings.h"
-#include "utils/wolf_utils.h"
-//#include <wolfssl/wolfcrypt/settings.h>
-
-//#include <wolfssl/ssl.h>
-//#include <wolfssl/wolfcrypt/sha256.h>
+// #include "utils/wolf_utils.h"
 #include <wolfssl/wolfcrypt/ecc.h>
-#include <wolfssl/openssl/ec.h>
-//#include <wolfssl/wolfcrypt/random.h>
-//#include <wolfssl/wolfcrypt/sp_int.h>
-//#include <wolfssl/wolfcrypt/integer.h>
-//#include <wolfssl/wolfcrypt/wolfmath.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
 
 #define ECQV_CURVE ECC_SECP256K1
 #define KEYSIZE 32
@@ -49,42 +42,40 @@ plic_instance_t g_plic;// Instance data for the PLIC.
 
 #define RTC_FREQ 1000000 // TODO: This is now extracted
 
-#ifdef WOLFSSL_STATIC_MEMORY
-//    static WOLFSSL_HEAP_HINT* HEAP_HINT_TEST;
-    static byte gTestMemory[STATIC_MEM_SIZE];
-//#else
-//    #define HEAP_HINT_TEST NULL
-#endif
+// #ifdef WOLFSSL_STATIC_MEMORY
+//     static WOLFSSL_HEAP_HINT* HEAP_HINT = NULL;
+//     static byte gMemory[STATIC_MEM_SIZE];
+// #endif
 
-typedef struct ecc_spec{
-    const ecc_set_type* spec;
-    mp_int prime;
-    mp_int af;
-    mp_int order;
-    ecc_point* G;
-    int idx;
-} ecc_spec;
+// typedef struct ecc_spec{
+//     const ecc_set_type* spec;
+//     mp_int prime;
+//     mp_int af;
+//     mp_int order;
+//     ecc_point* G;
+//     int idx;
+// } ecc_spec;
 
-void my_bio_dump_line(uint32_t cnt, unsigned char* s, int len){
-  kputs("\r");
-  uart_put_hex((void*) uart_reg, cnt*16);
-  kputs(" - ");
-  for(int i = 0; i < len; i++){
-      uart_put_hex_1b((void*) uart_reg, (uint8_t) s[i]);
-  }
-  kprintf("\n");
-}
+// void my_bio_dump_line(uint32_t cnt, unsigned char* s, int len){
+//   kputs("\r");
+//   uart_put_hex((void*) uart_reg, cnt*16);
+//   kputs(" - ");
+//   for(int i = 0; i < len; i++){
+//       uart_put_hex_1b((void*) uart_reg, (uint8_t) s[i]);
+//   }
+//   kprintf("\n");
+// }
 
-void my_bio_dump(unsigned char* s, int len){
-  int cnt = len/16;
-  for (int line = 0; line <cnt; line++){
-      my_bio_dump_line(line, s+line*16, 16);
-  }
-  int mod = len %(cnt*16);
-  if(mod != 0){
-      my_bio_dump_line(cnt+1, s+cnt*16,mod);
-  }
-}
+// void my_bio_dump(unsigned char* s, int len){
+//   int cnt = len/16;
+//   for (int line = 0; line <cnt; line++){
+//       my_bio_dump_line(line, s+line*16, 16);
+//   }
+//   int mod = len %(cnt*16);
+//   if(mod != 0){
+//       my_bio_dump_line(cnt+1, s+cnt*16,mod);
+//   }
+// }
 
 
 void boot_fail(long code, int trap)
@@ -330,6 +321,7 @@ int fdt_find_or_add_subnode(void *fdt, int parentoffset, const char *name)
 int timescale_freq = 0;
 
 // Register to extract
+unsigned long trng_reg = 0;
 unsigned long uart_reg = 0;
 int tlclk_freq;
 unsigned long plic_reg;
@@ -514,81 +506,60 @@ int main(int id, unsigned long dtb)
 	// Pack the FDT and place the data after it
 	fdt_pack((void*)dtb_target);
 
+  // custom peripheral get reg values
+  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,trng0");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find a node with compatible 'console,trng0'\r\nAborting...");
+    while(1);
+  }
+  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &trng_reg, NULL);
+  if(err < 0){
+    kputs("\r\nCannot get reg space from compatible 'console,trng0'\r\nAborting...");
+    while(1);
+  }
+
 
   // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome Kiet!\r\n\n");
-//  char demo[3] = "abc";
-//  char test[3];
-////  char* test = (char*)malloc(sizeof(char)*4);
-//  memcpy(test,demo,3);
-//  *(test+4) = '\n';
-//  kputs(test);
-//  kputs("Test memcpy\n");
-//  int r = memcmp(test,demo,3);
-//  if(r == 0){
-//    kputs("Identical mem\n");
-//  }else{
-//    kputs("Non-identical mem\n");
-//  }
+  uint32_t rand = 0;
+  int ret = 0;
 
-
-//  int testNum = 1997;
-//  int cpNum;
-//  memcpy((void*)cpNum, (void*)testNum, 4);
-//  kputs("\r\nTest memcpy (should be 1997): ");
-//  uart_put_dec((void*)uart_reg, cpNum);
-
+  ret = trng_setup((void*)trng_reg, (0x1 << 11));
+  if((ret == TRNG_ERROR_WAIT) || (ret == TRNG_ERROR_RANDOM)){
+    kprintf("Error setup trng\n");
+    goto end;
+  }else{
+    for(int i = 0; i < 10; i++){
+      rand = trng_get_random((void*)trng_reg);
+      if(rand == TRNG_ERROR_RANDOM){
+        kprintf("Errot gen random\n");
+        goto end;
+      }
+      kprintf("random number %d: %d \n",i, rand);
+    }
+  }
 
   // If finished, stay in a infinite loop
   kputs("\rTest Program with WolfSSl baremetal\r\n\n");
   #ifdef WOLFSSL_STATIC_MEMORY
-    WOLFSSL_HEAP_HINT* HEAP_HINT_TEST = NULL;
-    if(wc_LoadStaticMemory(&HEAP_HINT_TEST, gTestMemory, sizeof(gTestMemory), WOLFMEM_GENERAL, 1) != 0){
+    // WOLFSSL_HEAP_HINT* HEAP_HINT_TEST = NULL;
+    if(wc_LoadStaticMemory(&HEAP_HINT, gMemory, sizeof(gMemory), WOLFMEM_GENERAL, 1) != 0){
       kputs("\rUnable to load static memory\n");
-      while(1);
+      goto end;
     }else{
       kputs("\rSuccessfully load static memory\n");
     }
+    if(HEAP_HINT == NULL){
+      kprintf("HEAP_HINT is still NULL\n");
+      goto end;
+    }else{
+      kprintf("Successfully loaded static memory address to HEAP_HINT\n");
+      kprintf("HEAP_HINT location: %p\n",HEAP_HINT);
+    }
   #endif
-wolfCrypt_Init();
+  wolfCrypt_Init();
 
-  /*==========================*/
-  kputs("\nTest sha256\n");
-  Sha256 sha256;
-  byte data[] = {0x61,0x62,0x63};
-  byte result[32];
-  word32 data_len = sizeof(data);
-  int ret;
 
-  if ((ret = wc_InitSha256(&sha256)) != 0) {
-      kputs("\rError init sha256!\n");
-  }
-  else {
-    wc_Sha256Update(&sha256, data, data_len);
-    wc_Sha256Final(&sha256, result); //result finished here
-    wc_Sha256Free(&sha256); //free allocated
-  }
-  my_bio_dump(result, 32);
-  kputs("\rComplete hash test\n");
-  /*==========================*/
-
-    kputs("\r\nDemo wolfcrypt without openssl layer\n");
-    kputs("\r1. Gen curve specs\n");
-    ecc_spec curve;
-    curve.idx = wc_ecc_get_curve_idx(ECQV_CURVE);
-    kputs("\r\ncurve idx: ");
-    uart_put_dec((void*)uart_reg, curve.idx);
-    curve.spec = wc_ecc_get_curve_params(curve.idx);
-    kputs("\r\ncurve size: ");
-    uart_put_dec((void*)uart_reg, curve.spec->size);
-
-    //get base point data (order, af, prime, G) from data in the library
-    mp_init_multi(&(curve.af),&(curve.prime),&(curve.order),NULL,NULL,NULL);
-    curve.G = wc_ecc_new_point();
-    mp_read_radix(&(curve.order), curve.spec->order, 16); //convert const char* to big number base 16
-    mp_read_radix(&(curve.af), curve.spec->Af, 16); //convert const char* to big number base 16
-    mp_read_radix(&(curve.prime), curve.spec->prime, 16); //convert const char* to big number base 16
-    wc_ecc_get_generator(curve.G, curve.idx);
 
     kputs("\r\n\n2. Generate keys from curve specs\n");
     ecc_key key;
@@ -600,27 +571,21 @@ wolfCrypt_Init();
     }
     kputs("\rInit key OK\n");
 
-    ret = wc_InitRng_ex(&rng, HEAP_HINT_TEST, INVALID_DEVID);
+    ret = wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID);
 //    ret = wc_InitRng(&rng);
     if(ret != MP_OKAY){
       kputs("\rInit RNG failed\n");
+      if(ret == DRBG_CONT_FIPS_E){
+        kprintf("rng DRBG_CONT_FIPS_E\n");
+      }else if(ret == RNG_FAILURE_E){
+        kprintf("rng RNG_FAILURE_E\n");
+      }else{
+        kprintf("rng stop at %d\n", ret);
+      }
+
       goto end;
     }
-    kputs("\rInit RGN OK\n");
-
-    kputs("\rInitialzied completed\n");
-    ret = wc_ecc_set_curve(&key, KEYSIZE, ECQV_CURVE);
-//    ret = wc_ecc_gen_k(&rng, KEYSIZE, key.k, &(curve.order));
-
-//    ret = wc_ecc_make_key(&rng, 32, &key);
-    ret = wc_ecc_make_key_ex(&rng, 32, &key, ECQV_CURVE);
-
-    if(ret != MP_OKAY){
-        kputs("\r\nError gen private key: ");
-        uart_put_dec((void*)uart_reg, ret);
-    }else{
-        kputs("\r\nGen key successful\n");
-    }
+    kputs("\rInit RNG OK\n");
 
 
 
@@ -629,39 +594,44 @@ wolfCrypt_Init();
 
 
 
-//    ecc_key key;
-//    wc_ecc_init(&key);
-//    WC_RNG rng;
-//    wc_InitRng(&rng);
-//    int curveID = ECC_SECP256K1;
-//    int keySize = wc_ecc_get_curve_size_from_id(curveID);
-//    ret = wc_ecc_make_key_ex(&rng, keySize, &key, curveID);
-//    if(ret != MP_OKAY){
-//        kputs("\r\nError gen key \n");
-//    }
-//
-//    ret = wc_ecc_check_key(&key);
-//    if(ret != MP_OKAY){
-//        kputs("\r\nServer key gen failed\n");
-//
-//    }else{
-//        kputs("\r\nServer key gen success\n");
-//    }
 
 
-//    user U;
-//    server S;
-//    WOLFSSL_EC_GROUP *group = wolfSSL_EC_GROUP_new_by_curve_name(NID_secp256k1);
+  /*==========================*/
 
-//    byte UID[3] = "abc";
-//    U.UID = UID;
-//    U.key = EC_KEY_new();
-//    wolfSSL_EC_KEY_set_group(U.key, group);
+  server S;
+  node N;
+  ecc_spec curve;
+  // WC_RNG rng;
+  char temp[ID_SIZE] = {'a','b','c','d','e','f','g','h'};
+
+  kprintf("\nSetup Phase:\n");
+  kprintf("1. User set its own UID\n");
+
+  memcpy(N.id,temp, ID_SIZE);
+  kprintf("\tAssign Node ID: ");
+  for(int i = 0; i < ID_SIZE; i++){
+      kprintf("%x", N.id[i]);
+  }
+  kprintf("\n");
+
+  kprintf("2. Server generate its private key d_ca and public key Q_ca\n");
+  
+  ret = initial_setup(&curve, &S, &N);
+  if(ret != MP_OKAY){
+      kprintf("Setup phase FAILED\n");
+      return -1;
+  }
+
+
+
+
+
+
 
 
 end:
   kputs("\r\nComplete test library\n");
-wolfCrypt_Cleanup();
+  wolfCrypt_Cleanup();
   while(1);
 
   //dead code
