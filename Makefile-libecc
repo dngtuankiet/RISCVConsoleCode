@@ -29,10 +29,10 @@ CFLAGS_ARCH=-march=rv32imac -mabi=ilp32
 endif
 
 
-
+LIBECC_FLAGS = -DCUSTOM_RAND_GENERATE -DWORDSIZE=32 -DUSER_NN_BIT_LEN=256 -DWITH_LIBECC_CONFIG_OVERRIDE -DWITH_CURVE_SECP256K1 -DWITH_HASH_SHA256 -DWITH_SIG_ECDSA -DWITH_ECCCDH
 CFLAGS= $(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffreestanding --specs=htif_nano.specs
-CFLAGS+= -DCUSTOM_RAND_GENERATE -DWORDSIZE=32 -DUSER_NN_BIT_LEN=256
 CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0
+CFLAGS+= $(LIBECC_FLAGS)
 CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
 LFLAGS= -static -nostartfiles -specs=htif_nano.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T htif.lds
 
@@ -86,7 +86,7 @@ $(BUILD_DIR)/version.c:
 elftest := $(BUILD_DIR)/out.elf
 $(elftest): $(LIB_FS_O) $(LIBECC_UTILS_O) $(SRC_O)
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS_ARCH) -DCUSTOM_RAND_GENERATE -DWORDSIZE=32 -DUSER_NN_BIT_LEN=256 $(LFLAGS) -o $@  $(SRC_O) $(LIB_FS_O) $(LIBECC_UTILS_O) -lm
+	$(CC) $(CFLAGS_ARCH) $(LIBECC_FLAGS) $(LFLAGS) -o $@  $(SRC_O) $(LIB_FS_O) $(LIBECC_UTILS_O) -lm
 
 .PHONY: elftest
 elftest: $(elftest)
