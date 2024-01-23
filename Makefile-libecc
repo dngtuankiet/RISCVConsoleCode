@@ -1,6 +1,6 @@
 BOOTROM_DIR?=$(abspath .)
 
-#Kiet custom
+#test custom
 LIBECC_DIR = /home/tuankiet/tools/libecc
 
 LIBARITH = $(LIBECC_DIR)/build-riscv/libarith.a
@@ -12,11 +12,9 @@ LIB = -lm
 INCLUDE = -I$(LIBECC_DIR)/include
 
 ISACONF?=RV32IMAC
-#CROSSCOMPILE?=riscv32-unknown-elf
 CROSSCOMPILE?=riscv64-unknown-elf
 
 CC=riscv64-unknown-elf-gcc
-#CC_LINUX = riscv32-unknown-linux-gnu-gcc
 CCX=$(CROSSCOMPILE)-g++
 OBJCOPY=$(CROSSCOMPILE)-objcopy
 OBJDUMP=$(CROSSCOMPILE)-objdump
@@ -27,7 +25,7 @@ CFLAGS_ARCH=-march=rv64imac -mabi=lp64
 else ifeq ($(ISACONF),RV32GC)
 CFLAGS_ARCH=-march=rv32imafdc -mabi=ilp32d
 else #RV32IMAC
-CFLAGS_ARCH=-march=rv32i -mabi=ilp32
+CFLAGS_ARCH=-march=rv32imac -mabi=ilp32
 endif
 
 
@@ -36,7 +34,7 @@ CFLAGS= $(CFLAGS_ARCH) -mcmodel=medany -O2 -std=gnu11 -Wall -nostartfiles -ffree
 CFLAGS+= -DCUSTOM_RAND_GENERATE -DWORDSIZE=32 -DUSER_NN_BIT_LEN=256
 CFLAGS+= -fno-common -g -DENTROPY=0 -DNONSMP_HART=0
 CFLAGS+= -I $(BOOTROM_DIR)/include $(INCLUDE) -I. -I./src -I./kprintf -I./lib -I./clkutils -I./libfdt $(ADD_OPTS)
-LFLAGS= -static -nostartfiles -specs=htif_nano.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T kiet.lds
+LFLAGS= -static -nostartfiles -specs=htif_nano.specs -L $(BOOTROM_DIR)/linker -T memory.lds -T htif.lds
 
 BUILD_DIR?=$(abspath ./build)
 
@@ -85,29 +83,22 @@ $(BUILD_DIR)/version.c:
 	$(CCX) $(CFLAGS) -DFSBL_TARGET_ADDR=$(FSBL_TARGET_ADDR) -c $< -o $@
 
 
-elfkiet := $(BUILD_DIR)/out.elf
-$(elfkiet): $(LIB_FS_O) $(LIBECC_UTILS_O) $(SRC_O)
+elftest := $(BUILD_DIR)/out.elf
+$(elftest): $(LIB_FS_O) $(LIBECC_UTILS_O) $(SRC_O)
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS_ARCH) -DCUSTOM_RAND_GENERATE -DWORDSIZE=32 -DUSER_NN_BIT_LEN=256 $(LFLAGS) -o $@  $(SRC_O) $(LIB_FS_O) $(LIBECC_UTILS_O) -lm
 
-.PHONY: elfkiet
-elfkiet: $(elfkiet)
+.PHONY: elftest
+elftest: $(elftest)
 
-kiet := $(BUILD_DIR)/out.bin
-$(kiet): $(elfkiet)
+test := $(BUILD_DIR)/out.bin
+$(test): $(elftest)
 	$(OBJCOPY) -O binary $< $@
 	$(OBJDUMP) -d $^ > $@.dump
 
-.PHONY: kiet
-kiet: $(kiet)
+.PHONY: test
+test: $(test)
 
-# bin := $(BUILD_DIR)/out.bin
-# $(bin): $(elf)
-# 	$(OBJCOPY) -O binary $< $@
-# 	$(OBJDUMP) -d $^ > $@.dump
-#
-# .PHONY: bin
-# bin: $(bin)
 
 hex := $(BUILD_DIR)/out.hex
 $(hex): $(bin)
@@ -117,9 +108,9 @@ $(hex): $(bin)
 hex: $(hex)
 
 .PHONY: clean
-clean::
+clean:
 	rm -rf $(hex) $(elf) $(src_elf) src/main.o $(LIBECC_UTILS_O)
 
-.PHONY: clean
-clean_full::
+.PHONY: clean_full
+clean_full:
 	rm -rf $(hex) $(elf) $(src_elf) $(LIB_FS_O) $(SRC_O) build
