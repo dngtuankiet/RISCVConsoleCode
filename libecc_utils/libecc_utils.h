@@ -3,17 +3,21 @@
 
 // #include <stdio.h>
 // #include <stdlib.h>
-#include <string.h>
+// #include <string.h>
 
-
+#include <libecc/lib_ecc_config.h>
+#include <libecc/lib_ecc_types.h>
+#include <libecc/libarith.h>
 #include <libecc/libec.h>
+#include <libecc/libsig.h>
+
 /* We include the printf external dependency for printf output */
 #include <libecc/external_deps/print.h>
 /* We include the time external dependency for performance measurement */
 #include <libecc/external_deps/time.h>
 #include <libecc/external_deps/rand.h>
-#include <libecc/sig/ec_key.h>
-#include <libecc/nn/nn_mul.h>
+// #include <libecc/sig/ec_key.h>
+// #include <libecc/nn/nn_mul.h>
 
 #define CURVE_NAME "SECP256K1"
 
