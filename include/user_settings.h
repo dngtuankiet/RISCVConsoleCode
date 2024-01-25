@@ -202,20 +202,21 @@ extern "C" {
 /* Wolf Single Precision Math */
 /* Optional ECC SECP256R1 acceleration using optimized C code */
 #undef WOLFSSL_SP
-//#if 1
+// #if 1
+//     #define WOLFSSL_PUBLIC_MP
 //    #define WOLFSSL_SP
 //    #define WOLFSSL_SP_SMALL  /* use smaller version of code (requires heap) */
 //    #define SP_WORD_SIZE 32   /* force 32-bit type */
 //    #define WOLFSSL_SP_MATH   /* only SP math - eliminates fast math code */
 //    //#define WOLFSSL_SP_DIV_32 /* do not use 64-bit divides */
-//
+
 //    #ifdef HAVE_ECC
 //        #define WOLFSSL_HAVE_SP_ECC
 //    #endif
 //    #ifndef NO_RSA
 //        #define WOLFSSL_HAVE_SP_RSA
 //    #endif
-//#endif
+// #endif
 
 /* Ed25519 / Curve25519 */
 #undef HAVE_CURVE25519
@@ -507,7 +508,7 @@ extern "C" {
 //#define HAVE_COMP_KEY
 
 #undef  HAVE_TLS_EXTENSIONS
-//#define HAVE_TLS_EXTENSIONS
+#define HAVE_TLS_EXTENSIONS
 
 #undef  HAVE_SUPPORTED_CURVES
 #define HAVE_SUPPORTED_CURVES
@@ -530,8 +531,8 @@ extern "C" {
 #undef  NO_TLS
 #define NO_TLS
 
-//#undef  NO_ASN
-//#define NO_ASN
+#undef  NO_ASN
+// #define NO_ASN
 
 #undef  NO_RESUME_SUITE_CHECK
 #define NO_RESUME_SUITE_CHECK
@@ -591,14 +592,15 @@ extern "C" {
 //#define NO_CODING
 
 #undef  NO_ASN_TIME
-#define NO_ASN_TIME
+// #define NO_ASN_TIME
 
 #undef  NO_CERTS
-//#define NO_CERTS
+#define NO_CERTS
 
 #undef  NO_SIG_WRAPPER
-//#define NO_SIG_WRAPPER
+#define NO_SIG_WRAPPER
 
+// #undef HAVE_OCSP
 
 
 #ifdef __cplusplus

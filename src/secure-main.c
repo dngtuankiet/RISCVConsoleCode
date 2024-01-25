@@ -29,7 +29,6 @@
 
 #define ECQV_CURVE ECC_SECP256K1
 #define KEYSIZE 32
-#define STATIC_MEM_SIZE (200*1024)
 
 volatile unsigned long dtb_target;
 
@@ -43,9 +42,23 @@ plic_instance_t g_plic;// Instance data for the PLIC.
 #define RTC_FREQ 1000000 // TODO: This is now extracted
 
 // #ifdef WOLFSSL_STATIC_MEMORY
-//     static WOLFSSL_HEAP_HINT* HEAP_HINT = NULL;
+//     #define STATIC_MEM_SIZE (1*1024*1024)
+//     static WOLFSSL_HEAP_HINT* HEAP_HINT;
 //     static byte gMemory[STATIC_MEM_SIZE];
 // #endif
+
+
+// typedef struct ecc_spec{
+//     const ecc_set_type* spec;
+//     mp_int prime;
+//     mp_int af;
+//     mp_int order;
+//     ecc_point* G;
+//     int idx;
+//     /* Montgomery parameters */
+//     mp_int mu; // Montgomery normalizer
+//     mp_digit mp; // The "b" value from montgomery_setup()
+// } ecc_spec;
 
 // typedef struct ecc_spec{
 //     const ecc_set_type* spec;
@@ -524,8 +537,16 @@ int main(int id, unsigned long dtb)
   uint32_t rand = 0;
   int ret = 0;
 
+  char demo[10];
+  memset(demo, 1, 10);
+  for (size_t i = 0; i < 10; i++)
+  {
+    /* code */
+    kprintf("demo[%d]: %d\n", i, demo[i]);
+  }
+  
   ret = trng_setup((void*)trng_reg, (0x1 << 11));
-  if((ret == TRNG_ERROR_WAIT) || (ret == TRNG_ERROR_RANDOM)){
+  if(ret != TRNG_OKAY){
     kprintf("Error setup trng\n");
     goto end;
   }else{
@@ -539,11 +560,17 @@ int main(int id, unsigned long dtb)
     }
   }
 
+
+  #ifdef WOLFSSL_STATIC_MEMORY
+    WOLFSSL_HEAP_HINT* HEAP_HINT = NULL;
+  #endif
+
+
   // If finished, stay in a infinite loop
   kputs("\rTest Program with WolfSSl baremetal\r\n\n");
   #ifdef WOLFSSL_STATIC_MEMORY
     // WOLFSSL_HEAP_HINT* HEAP_HINT_TEST = NULL;
-    if(wc_LoadStaticMemory(&HEAP_HINT, gMemory, sizeof(gMemory), WOLFMEM_GENERAL, 1) != 0){
+    if(wc_LoadStaticMemory(&HEAP_HINT, gMemory, sizeof(gMemory), WOLFMEM_GENERAL, 0) != 0){
       kputs("\rUnable to load static memory\n");
       goto end;
     }else{
@@ -554,73 +581,152 @@ int main(int id, unsigned long dtb)
       goto end;
     }else{
       kprintf("Successfully loaded static memory address to HEAP_HINT\n");
-      kprintf("HEAP_HINT location: %p\n",HEAP_HINT);
+      kprintf("HEAP_HINT location: %x\n",HEAP_HINT);
     }
   #endif
   wolfCrypt_Init();
 
 
+  kputs("\r\nDemo wolfcrypt without openssl layer\n");
+  kputs("\r1. Gen curve specs\n");
+  ecc_spec curve;
+  curve.idx = wc_ecc_get_curve_idx(ECQV_CURVE);
+  // kputs("\r\ncurve idx: ");
+  // uart_put_dec((void*)uart_reg, curve.idx);
+  kprintf("curve idx: %d\n", curve.idx);
+  curve.spec = wc_ecc_get_curve_params(curve.idx);
+  // kputs("\r\ncurve size: ");
+  // uart_put_dec((void*)uart_reg, curve.spec->size);
+  kprintf("curve size: %d\n", curve.spec->size);
 
-    kputs("\r\n\n2. Generate keys from curve specs\n");
-    ecc_key key;
-    WC_RNG rng;
-    ret = wc_ecc_init(&key);
-    if(ret != MP_OKAY){
-        kputs("\rInit key failed\n");
-        goto end;
-    }
-    kputs("\rInit key OK\n");
+  //get base point data (order, af, prime, G) from data in the library
+  mp_init_multi(&(curve.af),&(curve.prime),&(curve.order),NULL,NULL,NULL);
+  curve.G = NULL;
+  curve.G = wc_ecc_new_point_h((void*)HEAP_HINT);
 
-    ret = wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID);
-//    ret = wc_InitRng(&rng);
-    if(ret != MP_OKAY){
-      kputs("\rInit RNG failed\n");
-      if(ret == DRBG_CONT_FIPS_E){
-        kprintf("rng DRBG_CONT_FIPS_E\n");
-      }else if(ret == RNG_FAILURE_E){
-        kprintf("rng RNG_FAILURE_E\n");
-      }else{
-        kprintf("rng stop at %d\n", ret);
-      }
+  ecc_point test;
+  wc_ecc_get_generator(&test, curve.idx); //require --enable-opensslall to work
+  kprintf("\t[Server] Test base G\n");
+  print_point(&curve, &test);
 
+  ecc_point test2;
+  mp_int Gx;
+  mp_int Gy;
+  mp_init(&Gx);
+  mp_init(&Gy);
+  mp_read_radix(&Gx, "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16); //convert const char* to big number base 16
+  mp_read_radix(&Gy, "483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16); //convert const char* to big number base 16
+  mp_copy(&Gx, test2.x);
+  mp_copy(&Gy, test2.y);
+  mp_set(&(test2.z), 1);
+  kprintf("\t[Server] Test2 base G\n");
+  print_point(&curve, &test2);
+
+  if(curve.G == NULL){
+    kprintf("ERROR Base point NULL");
+    goto end;
+  }else{
+    kprintf("Base point created\n");
+  }
+  mp_read_radix(&(curve.order), curve.spec->order, 16); //convert const char* to big number base 16
+  mp_read_radix(&(curve.af), curve.spec->Af, 16); //convert const char* to big number base 16
+  mp_read_radix(&(curve.prime), curve.spec->prime, 16); //convert const char* to big number base 16
+  wc_ecc_get_generator(curve.G, curve.idx); //require --enable-opensslall to work
+  
+
+  print_sp("\t[Server] Curve af", &(curve.af));
+  print_sp("\t[Server] Curve order", &(curve.order));
+  print_sp("\t[Server] Curve prime", &(curve.prime));
+  printf("\t[Server] Curve base G\n");
+  print_point(&curve, curve.G);
+
+  /* Calculate the Montgomery normalizer. */
+  if (mp_montgomery_calc_normalization(&(curve.mu), &(curve.prime)) != MP_OKAY) {
+      kprintf("mp_montgomery_calc_normalization error");
+      ret = 0;
+  }
+  print_sp("\tMontgomery mu", &(curve.mu));
+
+  mp_montgomery_setup(&(curve.prime), &(curve.mp));
+  kprintf("\tMontgomery mp: %ld\n", curve.mp);
+
+
+
+  kputs("\r\n\n2. Generate keys from curve specs\n");
+  ecc_key key;
+  WC_RNG rng;
+  ret = wc_ecc_init_ex(&key, HEAP_HINT, INVALID_DEVID);
+  if(ret != MP_OKAY){
+      kputs("\rInit key failed\n");
       goto end;
+  }
+  kputs("\rInit key with HEAP_HINT OK\n");
+
+  ret = wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID);
+//    ret = wc_InitRng(&rng);
+  if(ret != MP_OKAY){
+    kputs("\rInit RNG failed\n");
+    if(ret == DRBG_CONT_FIPS_E){
+      kprintf("rng DRBG_CONT_FIPS_E\n");
+    }else if(ret == RNG_FAILURE_E){
+      kprintf("rng RNG_FAILURE_E\n");
+    }else{
+      kprintf("rng stop at %d\n", ret);
     }
-    kputs("\rInit RNG OK\n");
+    goto end;
+  }
+  kputs("\rInit key with HEAP_HINT OK\n");
+
+  ret = wc_ecc_gen_k(&rng, KEYSIZE, key.k, &(curve.order));
+  kprintf("private key generated OK\n");
 
 
+  ret = wc_ecc_mulmod_ex(key.k, curve.G, &(key.pubkey), &(curve.af), &(curve.prime), 1,HEAP_HINT);
+  kprintf("public key generated OK\n");
 
+  print_sp("Private key",key.k);
+  kprintf("Public key: \n");
+  print_point(&curve, &(key.pubkey));  
 
+  kprintf("Verifying key...\n");
 
-
-
-
+  ret = wc_ecc_check_key(&key);
+  if(ret != MP_OKAY){
+      kprintf("-> Server key check FAILED at %d\n", ret);
+      goto end;
+  }else{
+      kprintf("\t[Server] key check SUCCESS\n");
+      print_sp("\t[Server] d_ca",key.k);
+      kprintf("\t[Server] Q_ca:\n");
+      print_point(&curve, &(key.pubkey));
+  }
 
 
   /*==========================*/
 
-  server S;
-  node N;
-  ecc_spec curve;
-  // WC_RNG rng;
-  char temp[ID_SIZE] = {'a','b','c','d','e','f','g','h'};
+  // server S;
+  // node N;
+  // ecc_spec curve;
+  // // WC_RNG rng;
+  // char temp[ID_SIZE] = {'a','b','c','d','e','f','g','h'};
 
-  kprintf("\nSetup Phase:\n");
-  kprintf("1. User set its own UID\n");
+  // kprintf("\nSetup Phase:\n");
+  // kprintf("1. User set its own UID\n");
 
-  memcpy(N.id,temp, ID_SIZE);
-  kprintf("\tAssign Node ID: ");
-  for(int i = 0; i < ID_SIZE; i++){
-      kprintf("%x", N.id[i]);
-  }
-  kprintf("\n");
+  // memcpy(N.id,temp, ID_SIZE);
+  // kprintf("\tAssign Node ID: ");
+  // for(int i = 0; i < ID_SIZE; i++){
+  //     kprintf("%x", N.id[i]);
+  // }
+  // kprintf("\n");
 
-  kprintf("2. Server generate its private key d_ca and public key Q_ca\n");
+  // kprintf("2. Server generate its private key d_ca and public key Q_ca\n");
   
-  ret = initial_setup(&curve, &S, &N);
-  if(ret != MP_OKAY){
-      kprintf("Setup phase FAILED\n");
-      return -1;
-  }
+  // ret = initial_setup(&curve, &S, &N);
+  // if(ret != MP_OKAY){
+  //     kprintf("Setup phase FAILED\n");
+  //     return -1;
+  // }
 
 
 
