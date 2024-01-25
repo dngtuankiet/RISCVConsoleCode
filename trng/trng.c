@@ -1,7 +1,37 @@
-#include <platform.h>
 #include "trng.h"
-#include "user_settings.h"
-#include "main.h"
+
+#ifdef CUSTOM_LIBECC
+int my_rng_gen_block(unsigned char* buf, uint16_t len){
+    int ret = 0;
+	uint16_t need = len, copied = 0;
+	uint16_t count = 4;
+
+	unsigned int rand = 0;
+    uint8_t buffer[4];
+
+	if (need <= 0) {
+		return -1;
+	}
+    while(need != copied){
+        rand = trng_get_random((void*)trng_reg);
+        if(rand == 0){
+            ret = -1;
+            goto end;
+        }
+        *(uint32_t*)buffer = rand;
+		memcpy((buf+copied), buffer, count);
+		copied = copied + count;
+		if((need-copied) < 4){
+			count = need-copied;
+		}else{
+			count = 4;
+		}
+	}
+
+end:
+    return ret;
+}
+#endif //CUSTOM_LIBECC
 
 unsigned int my_rng_seed_gen(void){
     return trng_get_random((void*)trng_reg);
@@ -74,6 +104,8 @@ int trng_setup(void* trngctrl, uint32_t delay){
     }
     
     trng_disable_mode(trngctrl);
+
+    return TRNG_OKAY;
 }
 
 uint32_t trng_get_random(void* trngctrl){

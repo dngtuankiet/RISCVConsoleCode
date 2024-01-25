@@ -5,20 +5,23 @@
 
 #include "main.h"
 #include "encoding.h"
-// #include <stdint.h>
-// #include <stdlib.h>
+#include <stdint.h>
+//#include <stdlib.h>
 #include <string.h>
-// #include <stdatomic.h>
+//#include <stdatomic.h>
 #include "libfdt/libfdt.h"
 #include "uart/uart.h"
 #include "trng/trng.h"
 #include <kprintf/kprintf.h>
-
-#include <platform.h>
+//#include <stdio.h>
+//
+#include <platform.h> //this calls devices/headers
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
 
+
 //Kiet custom
+#include "libecc_utils/libecc_utils.h"
 
 
 volatile unsigned long dtb_target;
@@ -31,7 +34,6 @@ function_ptr_t g_time_interrupt_handler = no_interrupt_handler;
 plic_instance_t g_plic;// Instance data for the PLIC.
 
 #define RTC_FREQ 1000000 // TODO: This is now extracted
-
 
 void boot_fail(long code, int trap)
 {
@@ -48,7 +50,6 @@ void handle_m_ext_interrupt(){
     g_ext_interrupt_handlers[int_num]();
   }
   else {
-    kputs("\rhandle_m_ext_interrupt\r\n");
     boot_fail((long) read_csr(mcause), 1);
     asm volatile ("nop");
     asm volatile ("nop");
@@ -86,7 +87,6 @@ uintptr_t handle_trap(uintptr_t mcause, uintptr_t epc)
     handle_m_time_interrupt();
   }
   else {
-    kputs("\rhandle_trap\r\n");
     boot_fail((long) read_csr(mcause), 1);
     asm volatile ("nop");
     asm volatile ("nop");
@@ -303,8 +303,8 @@ int main(int id, unsigned long dtb)
   //tlclk_freq = 20000000;
   _REG32(uart_reg, UART_REG_TXCTRL) = UART_TXEN;
   _REG32(uart_reg, UART_REG_RXCTRL) = UART_RXEN;
-
-  // 2. Get tl_clk
+  
+  // 2. Get tl_clk 
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/subsystem_pbus_clock");
   if (nodeoffset < 0) {
     kputs("\r\nCannot find '/soc/subsystem_pbus_clock'\r\nAborting...");
@@ -318,7 +318,7 @@ int main(int id, unsigned long dtb)
   if (len > sizeof(fdt32_t)) val++;
   tlclk_freq = fdt32_to_cpu(*val);
   _REG32(uart_reg, UART_REG_DIV) = uart_min_clk_divisor(tlclk_freq, 115200);
-
+  
   // 3. Get the mem_size
   nodeoffset = fdt_path_offset((void*)dtb, "/memory");
   if (nodeoffset < 0) {
@@ -333,25 +333,25 @@ int main(int id, unsigned long dtb)
   }
   unsigned long ddr_size = (unsigned long)mem_size; // TODO; get this
   unsigned long ddr_end = (unsigned long)mem_base + ddr_size;
-
+  
   // 4. Get the number of cores
   uint32_t num_cores = 0;
   err = fdt_parse_max_hart_id((void*)dtb, &num_cores);
   num_cores++; // Gives maxid. For max cores we need to add 1
-
+  
   // 5. Get the plic parameters
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/interrupt-controller");
   if (nodeoffset < 0) {
     kputs("\r\nCannot find '/soc/interrupt-controller'\r\nAborting...");
     while(1);
   }
-
+  
   err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &plic_reg, NULL);
   if (err < 0) {
     kputs("\r\nCannot get reg space from '/soc/interrupt-controller'\r\nAborting...");
     while(1);
   }
-
+  
   val = fdt_getprop((void*)dtb, nodeoffset, "riscv,ndev", &len);
   if(!val || len < sizeof(fdt32_t)) {
     kputs("\r\nThere is no riscv,ndev in '/soc/interrupt-controller'\r\nAborting...");
@@ -359,7 +359,7 @@ int main(int id, unsigned long dtb)
   }
   if (len > sizeof(fdt32_t)) val++;
   plic_ndevs = fdt32_to_cpu(*val);
-
+  
   val = fdt_getprop((void*)dtb, nodeoffset, "riscv,max-priority", &len);
   if(!val || len < sizeof(fdt32_t)) {
     kputs("\r\nThere is no riscv,max-priority in '/soc/interrupt-controller'\r\nAborting...");
@@ -372,14 +372,14 @@ int main(int id, unsigned long dtb)
   clear_csr(mstatus, MSTATUS_MIE);
   clear_csr(mie, MIP_MEIP);
   clear_csr(mie, MIP_MTIP);
-
+  
   if(plic_reg != 0) {
     PLIC_init(&g_plic,
               plic_reg,
               plic_ndevs,
               plic_max_priority);
   }
-
+  
   // Display some information
 #define DEQ(mon, x) ((cdate[0] == mon[0] && cdate[1] == mon[1] && cdate[2] == mon[2]) ? x : 0)
   const char *cdate = __DATE__;
@@ -421,11 +421,11 @@ int main(int id, unsigned long dtb)
     boot_fail(-err, 4);
   }
   //memcpy((void*)dtb_target, (void*)dtb, fdt_size(dtb));
-
+  
   // Put the choosen if non existent, and put the bootargs
   nodeoffset = fdt_find_or_add_subnode((void*)dtb_target, 0, "chosen");
   if (nodeoffset < 0) boot_fail(-nodeoffset, 2);
-
+	
   const char* str = "console=hvc0 earlycon=sbi";
   err = fdt_setprop((void*)dtb_target, nodeoffset, "bootargs", str, strlen(str) + 1);
   if (err < 0) boot_fail(-err, 3);
@@ -445,7 +445,7 @@ int main(int id, unsigned long dtb)
   timescale_freq = fdt32_to_cpu(*val);
   kputs("\r\nGot TIMEBASE: ");
   uart_put_dec((void*)uart_reg, timescale_freq);
-
+	
 	// Put the timebase-frequency for the cpus
   nodeoffset = fdt_subnode_offset((void*)dtb_target, 0, "cpus");
 	if (nodeoffset < 0) {
@@ -475,31 +475,167 @@ int main(int id, unsigned long dtb)
 
 
   // TODO: From this point, insert any code
-  kputs("\r\n\n\nWelcome Kiet!\r\n\n");
-  uint32_t rand = 0;
+  kprintf("\r\n\n\nWelcome! Hello world!\r\n\n");
   int ret = 0;
+  uint32_t rand = 0;
 
   ret = trng_setup((void*)trng_reg, (0x1 << 11));
   if((ret == TRNG_ERROR_WAIT) || (ret == TRNG_ERROR_RANDOM)){
     kprintf("Error setup trng\n");
-    goto end;
   }else{
     for(int i = 0; i < 10; i++){
       rand = trng_get_random((void*)trng_reg);
       if(rand == TRNG_ERROR_RANDOM){
         kprintf("Errot gen random\n");
-        goto end;
+        break;
       }
-      kprintf("random number %d: %d \n",i, rand);
+      kprintf("random number %d: %x \n",i, rand);
     }
   }
-
   
 
-end:
-  kputs("\r\nComplete test library\n");
-  while(1);
+  kprintf("Demo test Libecc library\n");
+  kprintf("Check HW random source\n");
+  unsigned char buf[32];
+  len = 32;
+  for(int i = 0; i < 5; i++){
+    ret = get_random(buf, len);
+    if(ret != 0){
+      kprintf("Error generate block random\n");
+      goto end;   
+    }
+    my_bio_dump(buf,32);
+  }
+  
+  // /* libecc internal structure holding the curve parameters */
+  // uint8_t curve_name[MAX_CURVE_NAME_LEN] = CURVE_NAME;
+  // ec_params curve_params;
+  
+  ret = init_curve(curve_name, &curve_params);
+  if(ret != 0){
+    kprintf("Error init curve\n");
+    goto end;   
+  }else{
+    kprintf("Curve init OK\n");
+  }
 
+  kprintf("Curve name in params: %s\n", curve_params.curve_name);
+    
+
+  ret = nn_check_initialized(&(curve_params.ec_gen_order));
+  if(ret != 0){
+    kprintf("Error check order curve\n");
+    goto end;   
+  }else{
+    kprintf("Curve order OK\n");
+  }
+
+  my_nn_print("Curve order", &(curve_params.ec_gen_order));
+
+  nn r;
+  ret = nn_get_random_mod(&r, &(curve_params.ec_gen_order));
+  if(ret != 0){
+    kprintf("-> ERROR gen temporary number\n");
+    goto end;
+  }
+  my_nn_print("Test random number", &r);
+
+  kprintf("Random check DONE\n");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  char temp[ID_SIZE] = {'a','b','c','d','e','f','g','h'};
+  node N;
+  server S;
+
+  kprintf("Demo ECQV with Libecc\n");
+
+ 
+  kprintf("\nSetup Phase:\n");
+  kprintf("1. User set its own UID\n");
+  memcpy(N.id,temp, ID_SIZE);
+  kprintf("\tAssign Node ID: ");
+  for(int i = 0; i < ID_SIZE; i++){
+    kprintf("%x", N.id[i]);
+  }
+  kprintf("\n");
+
+  // ret = init_curve(curve_name, &curve_params);
+  // if(ret != 0){
+  //   kprintf("Error init curve\n");
+  //   goto end;   
+  // }
+
+
+  kprintf("2. Server generate its private key d_ca and public key Q_ca\n");
+  ret = setup_phase(&curve_params, &N, &S);
+  if(ret != 0){
+      kprintf("Error setup phase\n");
+      goto end;   
+  }else{
+      kprintf("Setup phase OK\n");
+  }
+  
+  my_nn_print("Server private key d_ca", &(S.key.priv_key.x));
+  my_ec_point_print("Server public key Q_ca ", &(S.key.pub_key.y));
+
+
+  //Cert request
+  kprintf("\n===================Communication Start===================\n\n");
+  kprintf("Step 1: Certificate request from Node device\n");
+  ret = cert_request(&curve_params, &N);
+  if(ret != 0){
+      kprintf("Error certificate request\n");
+      goto end;   
+  }
+
+  my_nn_print("Node temporary private number", &(N.ku));
+  my_ec_point_print("Node temporary public point", &(N.Ru));
+
+  //Send to Server
+  kprintf("\n\t\tSend Node's ID, Ru to Server\n");
+  kprintf("\t\t------------------->\n");
+
+  kprintf("\nStep 2: Certificate generation from Server\n");
+  ret = implicit_cert_gen(&curve_params, &S, &(N.Ru), N.id);
+  if(ret != 0){
+      goto end;
+  }
+
+  kprintf("\n\t\tSend r,CertN to Node device\n");
+  kprintf("\t\t<-------------------\n");
+
+  kprintf("\nStep 3: Node's long-term keys extraction\n");
+  ret = extract_node_key_pair(&curve_params, &N, &(S.key.pub_key.y), &(S.r), S.certTemp);
+  if(ret != 0){
+      goto end;
+  }
+  my_nn_print("Node private key du", &(N.key.priv_key.x));
+  ec_point_print("Node public key Qu ", &(N.key.pub_key.y));
+
+  kprintf("\nStep 4: Keys verification\n");
+  ret = verify_key(&curve_params, &N);
+
+
+  // If finished, stay in a infinite loop
+end:
+  kprintf("Program Finished\n");
+  kprintf("Enter infinite while loop\n");
+  while(1);
   //dead code
   return 0;
 }

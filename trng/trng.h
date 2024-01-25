@@ -6,9 +6,19 @@
 
 #define MAX_WAIT_TIME 1000000
 #define TRNG_ERROR_WAIT -1
-#define TRNG_ERROR_RANDOM 0
+#define TRNG_ERROR_RANDOM -2
+#define TRNG_OKAY 0
 
 #include <stdint.h>
+#include "user_settings.h"
+
+#include "main.h"
+#include <platform.h>
+#include <string.h>
+
+#ifdef CUSTOM_LIBECC
+    #include "libecc_utils/libecc_utils.h"
+#endif //CUSTOM_LIBECC
 
 void trng_reset(void* trngctrl);
 void trng_reset_disable(void* trngctrl);
