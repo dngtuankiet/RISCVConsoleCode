@@ -19,16 +19,6 @@
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
 
-//Kiet custom
-#include "user_settings.h"
-// #include "utils/wolf_utils.h"
-#include <wolfssl/wolfcrypt/ecc.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-// #include <wolfssl/openssl/ec.h>
-
-#define ECQV_CURVE ECC_SECP256K1
-#define KEYSIZE 32
-#define STATIC_MEM_SIZE (200*1024)
 
 volatile unsigned long dtb_target;
 
@@ -40,44 +30,6 @@ function_ptr_t g_time_interrupt_handler = no_interrupt_handler;
 plic_instance_t g_plic;// Instance data for the PLIC.
 
 #define RTC_FREQ 1000000 // TODO: This is now extracted
-
-#ifdef WOLFSSL_STATIC_MEMORY
-//    static WOLFSSL_HEAP_HINT* HEAP_HINT;
-    static byte gTestMemory[STATIC_MEM_SIZE];
-//#else
-//    #define HEAP_HINT NULL
-#endif
-
-typedef struct ecc_spec{
-    const ecc_set_type* spec;
-    mp_int prime;
-    mp_int af;
-    mp_int order;
-    ecc_point* G;
-    int idx;
-} ecc_spec;
-
-void my_bio_dump_line(uint32_t cnt, unsigned char* s, int len){
-  kputs("\r");
-  uart_put_hex((void*) uart_reg, cnt*16);
-  kputs(" - ");
-  for(int i = 0; i < len; i++){
-      uart_put_hex_1b((void*) uart_reg, (uint8_t) s[i]);
-  }
-  kprintf("\n");
-}
-
-void my_bio_dump(unsigned char* s, int len){
-  int cnt = len/16;
-  for (int line = 0; line <cnt; line++){
-      my_bio_dump_line(line, s+line*16, 16);
-  }
-  int mod = len %(cnt*16);
-  if(mod != 0){
-      my_bio_dump_line(cnt+1, s+cnt*16,mod);
-  }
-}
-
 
 void boot_fail(long code, int trap)
 {
@@ -94,7 +46,6 @@ void handle_m_ext_interrupt(){
     g_ext_interrupt_handlers[int_num]();
   }
   else {
-    kputs("\rhandle_m_ext_interrupt\r\n");
     boot_fail((long) read_csr(mcause), 1);
     asm volatile ("nop");
     asm volatile ("nop");
@@ -132,7 +83,6 @@ uintptr_t handle_trap(uintptr_t mcause, uintptr_t epc)
     handle_m_time_interrupt();
   }
   else {
-    kputs("\rhandle_trap\r\n");
     boot_fail((long) read_csr(mcause), 1);
     asm volatile ("nop");
     asm volatile ("nop");
@@ -349,8 +299,8 @@ int main(int id, unsigned long dtb)
   //tlclk_freq = 20000000;
   _REG32(uart_reg, UART_REG_TXCTRL) = UART_TXEN;
   _REG32(uart_reg, UART_REG_RXCTRL) = UART_RXEN;
-
-  // 2. Get tl_clk
+  
+  // 2. Get tl_clk 
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/subsystem_pbus_clock");
   if (nodeoffset < 0) {
     kputs("\r\nCannot find '/soc/subsystem_pbus_clock'\r\nAborting...");
@@ -364,7 +314,7 @@ int main(int id, unsigned long dtb)
   if (len > sizeof(fdt32_t)) val++;
   tlclk_freq = fdt32_to_cpu(*val);
   _REG32(uart_reg, UART_REG_DIV) = uart_min_clk_divisor(tlclk_freq, 115200);
-
+  
   // 3. Get the mem_size
   nodeoffset = fdt_path_offset((void*)dtb, "/memory");
   if (nodeoffset < 0) {
@@ -379,25 +329,25 @@ int main(int id, unsigned long dtb)
   }
   unsigned long ddr_size = (unsigned long)mem_size; // TODO; get this
   unsigned long ddr_end = (unsigned long)mem_base + ddr_size;
-
+  
   // 4. Get the number of cores
   uint32_t num_cores = 0;
   err = fdt_parse_max_hart_id((void*)dtb, &num_cores);
   num_cores++; // Gives maxid. For max cores we need to add 1
-
+  
   // 5. Get the plic parameters
   nodeoffset = fdt_path_offset((void*)dtb, "/soc/interrupt-controller");
   if (nodeoffset < 0) {
     kputs("\r\nCannot find '/soc/interrupt-controller'\r\nAborting...");
     while(1);
   }
-
+  
   err = fdt_get_node_addr_size((void*)dtb, nodeoffset, &plic_reg, NULL);
   if (err < 0) {
     kputs("\r\nCannot get reg space from '/soc/interrupt-controller'\r\nAborting...");
     while(1);
   }
-
+  
   val = fdt_getprop((void*)dtb, nodeoffset, "riscv,ndev", &len);
   if(!val || len < sizeof(fdt32_t)) {
     kputs("\r\nThere is no riscv,ndev in '/soc/interrupt-controller'\r\nAborting...");
@@ -405,7 +355,7 @@ int main(int id, unsigned long dtb)
   }
   if (len > sizeof(fdt32_t)) val++;
   plic_ndevs = fdt32_to_cpu(*val);
-
+  
   val = fdt_getprop((void*)dtb, nodeoffset, "riscv,max-priority", &len);
   if(!val || len < sizeof(fdt32_t)) {
     kputs("\r\nThere is no riscv,max-priority in '/soc/interrupt-controller'\r\nAborting...");
@@ -418,14 +368,14 @@ int main(int id, unsigned long dtb)
   clear_csr(mstatus, MSTATUS_MIE);
   clear_csr(mie, MIP_MEIP);
   clear_csr(mie, MIP_MTIP);
-
+  
   if(plic_reg != 0) {
     PLIC_init(&g_plic,
               plic_reg,
               plic_ndevs,
               plic_max_priority);
   }
-
+  
   // Display some information
 #define DEQ(mon, x) ((cdate[0] == mon[0] && cdate[1] == mon[1] && cdate[2] == mon[2]) ? x : 0)
   const char *cdate = __DATE__;
@@ -467,11 +417,11 @@ int main(int id, unsigned long dtb)
     boot_fail(-err, 4);
   }
   //memcpy((void*)dtb_target, (void*)dtb, fdt_size(dtb));
-
+  
   // Put the choosen if non existent, and put the bootargs
   nodeoffset = fdt_find_or_add_subnode((void*)dtb_target, 0, "chosen");
   if (nodeoffset < 0) boot_fail(-nodeoffset, 2);
-
+	
   const char* str = "console=hvc0 earlycon=sbi";
   err = fdt_setprop((void*)dtb_target, nodeoffset, "bootargs", str, strlen(str) + 1);
   if (err < 0) boot_fail(-err, 3);
@@ -491,7 +441,7 @@ int main(int id, unsigned long dtb)
   timescale_freq = fdt32_to_cpu(*val);
   kputs("\r\nGot TIMEBASE: ");
   uart_put_dec((void*)uart_reg, timescale_freq);
-
+	
 	// Put the timebase-frequency for the cpus
   nodeoffset = fdt_subnode_offset((void*)dtb_target, 0, "cpus");
 	if (nodeoffset < 0) {
@@ -521,7 +471,7 @@ int main(int id, unsigned long dtb)
 
 
   // TODO: From this point, insert any code
-  kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
+  kprintf("\r\n\n\nWelcome! Hello world!\r\n\n");
   int status = 0;
   uint32_t rand = 0;
 
@@ -538,141 +488,13 @@ int main(int id, unsigned long dtb)
       kprintf("random number %d: %d \n",i, rand);
     }
   }
-  // trng_reset_disable((void*)trng_reg);
+  trng_reset_disable((void*)trng_reg);
 
   
 
   // If finished, stay in a infinite loop
-  kputs("\rTest Program with WolfSSl baremetal\r\n\n");
-  #ifdef WOLFSSL_STATIC_MEMORY
-    WOLFSSL_HEAP_HINT* HEAP_HINT = NULL;
-    if(wc_LoadStaticMemory(&HEAP_HINT, gTestMemory, sizeof(gTestMemory), WOLFMEM_GENERAL, 1) != 0){
-      kputs("\rUnable to load static memory\n");
-      while(1);
-    }else{
-      kputs("\rSuccessfully load static memory\n");
-    }
-  #endif
-  wolfCrypt_Init();
-
-  /*==========================*/
-  kputs("\nTest sha256\n");
-  Sha256 sha256;
-  byte data[] = {0x61,0x62,0x63};
-  byte result[32];
-  word32 data_len = sizeof(data);
-  int ret;
-
-  if ((ret = wc_InitSha256(&sha256)) != 0) {
-      kputs("\rError init sha256!\n");
-  }
-  else {
-    wc_Sha256Update(&sha256, data, data_len);
-    wc_Sha256Final(&sha256, result); //result finished here
-    wc_Sha256Free(&sha256); //free allocated
-  }
-  my_bio_dump(result, 32);
-  kputs("\rComplete hash test\n");
-  /*==========================*/
-
-    kputs("\r\nDemo wolfcrypt without openssl layer\n");
-    kputs("\r1. Gen curve specs\n");
-    ecc_spec curve;
-    curve.idx = wc_ecc_get_curve_idx(ECQV_CURVE);
-    kputs("\r\ncurve idx: ");
-    uart_put_dec((void*)uart_reg, curve.idx);
-    curve.spec = wc_ecc_get_curve_params(curve.idx);
-    kputs("\r\ncurve size: ");
-    uart_put_dec((void*)uart_reg, curve.spec->size);
-
-    //get base point data (order, af, prime, G) from data in the library
-    mp_init_multi(&(curve.af),&(curve.prime),&(curve.order),NULL,NULL,NULL);
-    curve.G = wc_ecc_new_point();
-    mp_read_radix(&(curve.order), curve.spec->order, 16); //convert const char* to big number base 16
-    mp_read_radix(&(curve.af), curve.spec->Af, 16); //convert const char* to big number base 16
-    mp_read_radix(&(curve.prime), curve.spec->prime, 16); //convert const char* to big number base 16
-    // wc_ecc_get_generator(curve.G, curve.idx); //require --enable-opensslall to work
-
-    kputs("\r\n\n2. Generate keys from curve specs\n");
-    ecc_key key;
-    WC_RNG rng;
-    ret = wc_ecc_init(&key);
-    if(ret != MP_OKAY){
-        kputs("\rInit key failed\n");
-        goto end;
-    }
-    kputs("\rInit key OK\n");
-
-    ret = wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID);
-//    ret = wc_InitRng(&rng);
-    if(ret != MP_OKAY){
-      kputs("\rInit RNG failed\n");
-      if(ret == DRBG_CONT_FIPS_E){
-        kprintf("rng DRBG_CONT_FIPS_E\n");
-      }else if(ret == RNG_FAILURE_E){
-        kprintf("rng RNG_FAILURE_E\n");
-      }else{
-        kprintf("rng stop at %d\n", ret);
-      }
-
-      goto end;
-    }
-    kputs("\rInit RNG OK\n");
-
-    kputs("\rInitialzied completed\n");
-    ret = wc_ecc_set_curve(&key, KEYSIZE, ECQV_CURVE);
-//    ret = wc_ecc_gen_k(&rng, KEYSIZE, key.k, &(curve.order));
-
-//    ret = wc_ecc_make_key(&rng, 32, &key);
-    ret = wc_ecc_make_key_ex(&rng, 32, &key, ECQV_CURVE);
-
-    if(ret != MP_OKAY){
-        kputs("\r\nError gen private key: ");
-        uart_put_dec((void*)uart_reg, ret);
-    }else{
-        kputs("\r\nGen key successful\n");
-    }
-
-
-
-
-
-
-
-
-//    ecc_key key;
-//    wc_ecc_init(&key);
-//    WC_RNG rng;
-//    wc_InitRng(&rng);
-//    int curveID = ECC_SECP256K1;
-//    int keySize = wc_ecc_get_curve_size_from_id(curveID);
-//    ret = wc_ecc_make_key_ex(&rng, keySize, &key, curveID);
-//    if(ret != MP_OKAY){
-//        kputs("\r\nError gen key \n");
-//    }
-//
-//    ret = wc_ecc_check_key(&key);
-//    if(ret != MP_OKAY){
-//        kputs("\r\nServer key gen failed\n");
-//
-//    }else{
-//        kputs("\r\nServer key gen success\n");
-//    }
-
-
-//    user U;
-//    server S;
-//    WOLFSSL_EC_GROUP *group = wolfSSL_EC_GROUP_new_by_curve_name(NID_secp256k1);
-
-//    byte UID[3] = "abc";
-//    U.UID = UID;
-//    U.key = EC_KEY_new();
-//    wolfSSL_EC_KEY_set_group(U.key, group);
-
-
-end:
-  kputs("\r\nComplete test library\n");
-  wolfCrypt_Cleanup();
+  kprintf("Program Finished\n");
+  kprintf("Enter infinite while loop\n");
   while(1);
 
   //dead code
