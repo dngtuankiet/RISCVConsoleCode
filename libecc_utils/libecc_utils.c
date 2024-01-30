@@ -270,14 +270,17 @@ int implicit_cert_gen(ec_params* curve_params, server* S, prj_pt* Ru, unsigned c
     // r = ek + d_ca (mod q)
     // ret = n_mul_low(&ek, &e, &k, (u8)(e.wlen + k.wlen));
     ret = nn_mul(&ek, &e, &k);
-    ret = nn_mod_add(&(S->r), &ek, &(S->key.priv_key.x), &(curve_params->ec_gen_order));
+    // ret = nn_mod_add(&(S->r), &ek, &(S->key.priv_key.x), &(curve_params->ec_gen_order));
+    ret = nn_add(&ek, &ek, &(S->key.priv_key.x));
+    ret = nn_mod_notrim(&(S->r), &ek, &(curve_params->ec_gen_order));
+
     my_nn_print("Curve order", &(curve_params->ec_gen_order));
     if(ret != 0){
         kprintf("-> Server ERROR add mod for r\n");
         goto err;
     }
 
-    my_nn_print("Server ek", &ek);
+    // my_nn_print("Server ek", &ek);
     my_nn_print("Server r", &(S->r));
 
 err:
@@ -365,7 +368,9 @@ int extract_node_key_pair(ec_params* curve_params, node* N, prj_pt* S_pubKey, nn
     my_nn_print("\tNode eku", &eku);
     // my_nn_print("Curve order", &(curve_params.ec_gen_order));
     //du = eku + r (mod q)
-    ret = nn_mod_add(&(N->key.priv_key.x), &eku, r, &(curve_params->ec_gen_order)); //long-term private key
+    // ret = nn_mod_add(&(N->key.priv_key.x), &eku, r, &(curve_params->ec_gen_order)); //long-term private key
+    ret = nn_add(&eku, &eku, r);
+    ret = nn_mod_notrim(&(N->key.priv_key.x), &eku, &(curve_params->ec_gen_order));
     if(ret != 0){
         kprintf("-> Node ERROR calculating private key\n");
         goto err;
