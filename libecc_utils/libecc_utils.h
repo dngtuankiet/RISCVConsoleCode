@@ -13,6 +13,7 @@
 #include <libecc/libarith.h>
 #include <libecc/libec.h>
 #include <libecc/libsig.h>
+#include <libecc/nn/nn_div.h>
 
 /* We include the printf external dependency for printf output */
 #include <libecc/external_deps/print.h>
@@ -27,6 +28,7 @@
 #include <kprintf/kprintf.h>
 #include <uart/uart.h>
 #include "main.h"
+#include "encoding.h"
 
 #define CURVE_NAME "SECP256K1"
 
@@ -49,7 +51,7 @@
 
 /* libecc internal structure holding the curve parameters */
 static  uint8_t curve_name[MAX_CURVE_NAME_LEN] = CURVE_NAME;
- static ec_params curve_params;
+static ec_params curve_params;
 
 typedef struct node {
     ec_key_pair key; //node long-term keys
@@ -86,6 +88,15 @@ int extract_point_from_cert(ec_params* curve_params, prj_pt* Pu, unsigned char* 
 int verify_key(ec_params* curve_params, node* N);
 
 
+//basic
+int kiet_nn_get_random_mod(nn_t out, nn_src_t q);
+
+int kiet_prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
+static int kiet_prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
+static int kiet_blind_projective_point(prj_pt_t out, prj_pt_src_t in);
+
+int kiet_prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2);
+static int kiet__prj_pt_add_monty_cf(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2);
 
 #endif //__LIBECC_UTILS__
 

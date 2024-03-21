@@ -473,3 +473,367 @@ err:
 
     return ret;
 }
+
+
+int kiet_nn_get_random_mod(nn_t out, nn_src_t q)
+{
+	nn tmp_rand, qprime;
+	bitcnt_t q_bit_len, q_len;
+	int ret, isone;
+	qprime.magic = tmp_rand.magic = WORD(0);
+
+	/* Check q is initialized and get its bit length */
+	ret = nn_check_initialized(q); EG(ret, err);
+	ret = nn_bitlen(q, &q_bit_len); EG(ret, err);
+	q_len = (bitcnt_t)BYTECEIL(q_bit_len);
+
+	/* Check q is neither 0, nor 1 and its size is ok */
+	MUST_HAVE((q_len) && (q_len <= (NN_MAX_BYTE_LEN / 2)), ret, err);
+	MUST_HAVE((!nn_isone(q, &isone)) && (!isone), ret, err);
+
+	/* 1) compute q' = q - 1  */
+	ret = nn_copy(&qprime, q); EG(ret, err);
+	ret = nn_dec(&qprime, &qprime); EG(ret, err);
+
+	/* 2) generate a random value tmp_rand twice the size of q */
+	ret = nn_init(&tmp_rand, (u16)(2 * q_len)); EG(ret, err);
+	ret = get_random((u8 *)tmp_rand.val, (u16)(2 * q_len)); EG(ret, err);
+
+	/* 3) compute out = tmp_rand mod q' */
+	ret = nn_init(out, (u16)q_len); EG(ret, err);
+
+	/* Use nn_mod_notrim to avoid exposing the generated random length */
+    long start = (long) read_csr(mcycle);
+	ret = nn_mod_notrim(out, &tmp_rand, &qprime); EG(ret, err);
+    long end = (long) read_csr(mcycle);
+    kprintf("==> modulo cycle: %d\n", end - start);
+
+	/* 4) compute out += 1 */
+	ret = nn_inc(out, out);
+
+ err:
+	nn_uninit(&qprime);
+	nn_uninit(&tmp_rand);
+
+	return ret;
+}
+
+int kiet_prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
+    int ret, on_curve;
+
+	ret = prj_pt_check_initialized(in); EG(ret, err);
+	ret = nn_check_initialized(m); EG(ret, err);
+
+	/* Check that the input is on the curve */
+	MUST_HAVE((!prj_pt_is_on_curve(in, &on_curve)) && on_curve, ret, err);
+
+    long start = (long) read_csr(mcycle);
+    ret = kiet_prj_pt_mul_ltr_monty_ladder(out, m, in); EG(ret, err);
+    long end = (long) read_csr(mcycle);
+    kprintf("==> point scalar mult: %d\n", end - start);
+
+	/* Check that the output is on the curve */
+	MUST_HAVE((!prj_pt_is_on_curve(out, &on_curve)) && on_curve, ret, err);
+
+err:
+	return ret;
+}
+
+static int kiet_prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+{
+	/* We use Itoh et al. notations here for T and the random r */
+	prj_pt T[3];
+	bitcnt_t mlen;
+	u8 mbit, rbit;
+	/* Random for masking the Montgomery Ladder algorithm */
+	nn r;
+	/* The new scalar we will use with MSB fixed to 1 (noted m' above).
+	 * This helps dealing with constant time.
+	 */
+	nn m_msb_fixed;
+	nn_src_t curve_order;
+	nn curve_order_square;
+	int ret, ret_ops, cmp;
+	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
+	T[0].magic = T[1].magic = T[2].magic = WORD(0);
+
+	/* Compute m' from m depending on the rule described above */
+	curve_order = &(in->crv->order);
+
+	/* First compute q**2 */
+	ret = nn_sqr(&curve_order_square, curve_order); EG(ret, err);
+
+	/* Then compute m' depending on m size */
+	ret = nn_cmp(m, curve_order, &cmp); EG(ret, err);
+	if (cmp < 0) {
+		bitcnt_t msb_bit_len, order_bitlen;
+
+		/* Case where m < q */
+		ret = nn_add(&m_msb_fixed, m, curve_order); EG(ret, err);
+		ret = nn_bitlen(&m_msb_fixed, &msb_bit_len); EG(ret, err);
+		ret = nn_bitlen(curve_order, &order_bitlen); EG(ret, err);
+		ret = nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed,
+				&m_msb_fixed, curve_order); EG(ret, err);
+	} else {
+		ret = nn_cmp(m, &curve_order_square, &cmp); EG(ret, err);
+		if (cmp < 0) {
+			bitcnt_t msb_bit_len, curve_order_square_bitlen;
+
+			/* Case where m >= q and m < (q**2) */
+			ret = nn_add(&m_msb_fixed, m, &curve_order_square); EG(ret, err);
+			ret = nn_bitlen(&m_msb_fixed, &msb_bit_len); EG(ret, err);
+			ret = nn_bitlen(&curve_order_square, &curve_order_square_bitlen); EG(ret, err);
+			ret = nn_cnd_add((msb_bit_len == curve_order_square_bitlen),
+					 &m_msb_fixed, &m_msb_fixed, &curve_order_square); EG(ret, err);
+		} else {
+			/* Case where m >= (q**2) */
+			ret = nn_copy(&m_msb_fixed, m); EG(ret, err);
+		}
+	}
+
+	ret = nn_bitlen(&m_msb_fixed, &mlen); EG(ret, err);
+	MUST_HAVE((mlen != 0), ret, err);
+	mlen--;
+
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
+
+	/* Get a random r with the same size of m_msb_fixed */
+	ret = nn_get_random_len(&r, (u16)(m_msb_fixed.wlen * WORD_BYTES)); EG(ret, err);
+
+	ret = nn_getbit(&r, mlen, &rbit); EG(ret, err);
+
+	/* Initialize points */
+	ret = prj_pt_init(&T[0], in->crv); EG(ret, err);
+	ret = prj_pt_init(&T[1], in->crv); EG(ret, err);
+	ret = prj_pt_init(&T[2], in->crv); EG(ret, err);
+
+	/* Initialize T[r[n-1]] to input point */
+	/*
+	 * Blind the point with projective coordinates
+	 * (X, Y, Z) => (l*X, l*Y, l*Z)
+	 */
+	ret = kiet_blind_projective_point(&T[rbit], in); EG(ret, err);
+
+	/* Initialize T[1-r[n-1]] with ECDBL(T[r[n-1]])) */
+#ifndef NO_USE_COMPLETE_FORMULAS
+	/*
+	 * NOTE: in case of complete formulas, we use the
+	 * addition for doubling, incurring a small performance hit
+	 * for better SCA resistance.
+	 */
+	ret_ops |= prj_pt_add(&T[1-rbit], &T[rbit], &T[rbit]);
+#else
+	ret_ops |= prj_pt_dbl(&T[1-rbit], &T[rbit]);
+#endif
+
+	/* Main loop of the Montgomery Ladder */
+	while (mlen > 0) {
+		u8 rbit_next;
+		--mlen;
+		/* rbit is r[i+1], and rbit_next is r[i] */
+		ret = nn_getbit(&r, mlen, &rbit_next); EG(ret, err);
+
+		/* mbit is m[i] */
+		ret = nn_getbit(&m_msb_fixed, mlen, &mbit); EG(ret, err);
+		/* Double: T[2] = ECDBL(T[d[i] ^ r[i+1]]) */
+
+#ifndef NO_USE_COMPLETE_FORMULAS
+		/* NOTE: in case of complete formulas, we use the
+		 * addition for doubling, incurring a small performance hit
+		 * for better SCA resistance.
+		 */
+		ret_ops |= prj_pt_add(&T[2], &T[mbit ^ rbit], &T[mbit ^ rbit]);
+#else
+		ret_ops |= prj_pt_dbl(&T[2], &T[mbit ^ rbit]);
+#endif
+
+		/* Add: T[1] = ECADD(T[0],T[1]) */
+		ret_ops |= prj_pt_add(&T[1], &T[0], &T[1]);
+
+		/* T[0] = T[2-(d[i] ^ r[i])] */
+		/*
+		 * NOTE: we use the low level nn_copy function here to avoid
+		 * any possible leakage on operands with prj_pt_copy
+		 */
+		ret = nn_copy(&(T[0].X.fp_val), &(T[2-(mbit ^ rbit_next)].X.fp_val)); EG(ret, err);
+		ret = nn_copy(&(T[0].Y.fp_val), &(T[2-(mbit ^ rbit_next)].Y.fp_val)); EG(ret, err);
+		ret = nn_copy(&(T[0].Z.fp_val), &(T[2-(mbit ^ rbit_next)].Z.fp_val)); EG(ret, err);
+
+		/* T[1] = T[1+(d[i] ^ r[i])] */
+		/* NOTE: we use the low level nn_copy function here to avoid
+		 * any possible leakage on operands with prj_pt_copy
+		 */
+		ret = nn_copy(&(T[1].X.fp_val), &(T[1+(mbit ^ rbit_next)].X.fp_val)); EG(ret, err);
+		ret = nn_copy(&(T[1].Y.fp_val), &(T[1+(mbit ^ rbit_next)].Y.fp_val)); EG(ret, err);
+		ret = nn_copy(&(T[1].Z.fp_val), &(T[1+(mbit ^ rbit_next)].Z.fp_val)); EG(ret, err);
+
+		/* Update rbit */
+		rbit = rbit_next;
+	}
+	/* Output: T[r[0]] */
+	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
+
+err:
+	prj_pt_uninit(&T[0]);
+	prj_pt_uninit(&T[1]);
+	prj_pt_uninit(&T[2]);
+	nn_uninit(&r);
+	nn_uninit(&m_msb_fixed);
+	nn_uninit(&curve_order_square);
+
+	PTR_NULLIFY(curve_order);
+
+	return ret;
+}
+
+static int kiet_blind_projective_point(prj_pt_t out, prj_pt_src_t in)
+{
+	int ret;
+
+	/* Random for projective coordinates masking */
+	/* NOTE: to limit stack usage, we reuse out->Z as a temporary
+	 * variable. This does not work if in == out, hence the check.
+	 */
+	MUST_HAVE((in != out), ret, err);
+
+	ret = prj_pt_init(out, in->crv); EG(ret, err);
+
+	/* Get a random value l in Fp */
+	ret = fp_get_random(&(out->Z), in->X.ctx); EG(ret, err);
+
+	/*
+	 * Blind the point with projective coordinates
+	 * (X, Y, Z) => (l*X, l*Y, l*Z)
+	 */
+	ret = fp_mul_monty(&(out->X), &(in->X), &(out->Z)); EG(ret, err);
+	ret = fp_mul_monty(&(out->Y), &(in->Y), &(out->Z)); EG(ret, err);
+	ret = fp_mul_monty(&(out->Z), &(in->Z), &(out->Z));
+
+err:
+	return ret;
+}
+
+
+int kiet_prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+{
+	int ret;
+
+	ret = prj_pt_check_initialized(in1); EG(ret, err);
+	ret = prj_pt_check_initialized(in2); EG(ret, err);
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
+
+    long start = (long) read_csr(mcycle);
+    ret = kiet__prj_pt_add_monty_cf(out, in1, in2);
+    long end = (long) read_csr(mcycle);
+    kprintf("==> point addition: %d\n", end - start);
+err:
+	return ret;
+}
+
+static int kiet__prj_pt_add_monty_cf(prj_pt_t out,
+							   prj_pt_src_t in1,
+							   prj_pt_src_t in2)
+{
+	int cmp1, cmp2;
+	fp t0, t1, t2, t3, t4, t5;
+	int ret;
+	t0.magic = t1.magic = t2.magic = WORD(0);
+	t3.magic = t4.magic = t5.magic = WORD(0);
+
+	ret = prj_pt_init(out, in1->crv); EG(ret, err);
+
+	ret = fp_init(&t0, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t1, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t2, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t3, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t4, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t5, out->crv->a.ctx); EG(ret, err);
+
+	ret = fp_mul_monty(&t0, &in1->X, &in2->X); EG(ret, err);
+	ret = fp_mul_monty(&t1, &in1->Y, &in2->Y); EG(ret, err);
+	ret = fp_mul_monty(&t2, &in1->Z, &in2->Z); EG(ret, err);
+	ret = fp_add_monty(&t3, &in1->X, &in1->Y); EG(ret, err);
+	ret = fp_add_monty(&t4, &in2->X, &in2->Y); EG(ret, err);
+
+	ret = fp_mul_monty(&t3, &t3, &t4); EG(ret, err);
+	ret = fp_add_monty(&t4, &t0, &t1); EG(ret, err);
+	ret = fp_sub_monty(&t3, &t3, &t4); EG(ret, err);
+	ret = fp_add_monty(&t4, &in1->X, &in1->Z); EG(ret, err);
+	ret = fp_add_monty(&t5, &in2->X, &in2->Z); EG(ret, err);
+
+	ret = fp_mul_monty(&t4, &t4, &t5); EG(ret, err);
+	ret = fp_add_monty(&t5, &t0, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t4, &t4, &t5); EG(ret, err);
+	ret = fp_add_monty(&t5, &in1->Y, &in1->Z); EG(ret, err);
+	ret = fp_add_monty(&out->X, &in2->Y, &in2->Z); EG(ret, err);
+
+	ret = fp_mul_monty(&t5, &t5, &out->X); EG(ret, err);
+	ret = fp_add_monty(&out->X, &t1, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t5, &t5, &out->X); EG(ret, err);
+	ret = fp_mul_monty(&out->Z, &in1->crv->a_monty, &t4); EG(ret, err);
+	ret = fp_mul_monty(&out->X, &in1->crv->b3_monty, &t2); EG(ret, err);
+
+	ret = fp_add_monty(&out->Z, &out->X, &out->Z); EG(ret, err);
+	ret = fp_sub_monty(&out->X, &t1, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &t1, &out->Z); EG(ret, err);
+	ret = fp_mul_monty(&out->Y, &out->X, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&t1, &t0, &t0); EG(ret, err);
+
+	ret = fp_add_monty(&t1, &t1, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t2, &in1->crv->a_monty, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t4, &in1->crv->b3_monty, &t4); EG(ret, err);
+	ret = fp_add_monty(&t1, &t1, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t2, &t0, &t2); EG(ret, err);
+
+	ret = fp_mul_monty(&t2, &in1->crv->a_monty, &t2); EG(ret, err);
+	ret = fp_add_monty(&t4, &t4, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t1, &t4); EG(ret, err);
+	ret = fp_add_monty(&out->Y, &out->Y, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t5, &t4); EG(ret, err);
+
+	ret = fp_mul_monty(&out->X, &t3, &out->X); EG(ret, err);
+	ret = fp_sub_monty(&out->X, &out->X, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t3, &t1); EG(ret, err);
+	ret = fp_mul_monty(&out->Z, &t5, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &out->Z, &t0);
+
+	/* Check for "exceptional" pairs of input points with
+	 * checking if Y = Z = 0 as output (see the Bosma-Lenstra
+	 * article "Complete Systems of Two Addition Laws for
+	 * Elliptic Curves"). This should only happen on composite
+	 * order curves (i.e. not on prime order curves).
+	 *
+	 * In this case, we raise an error as the result is
+	 * not sound. This should not happen in our nominal
+	 * cases with regular signature and protocols, and if
+	 * it happens this usually means that bad points have
+	 * been injected.
+	 *
+	 * NOTE: if for some reasons you need to deal with
+	 * all the possible pairs of points including these
+	 * exceptional pairs of inputs with an order 2 difference,
+	 * you should fallback to the incomplete formulas using the
+	 * COMPLETE=0 compilation toggle. Beware that in this
+	 * case, the library will be more sensitive to
+	 * side-channel attacks.
+	 */
+	ret = fp_iszero(&(out->Z), &cmp1); EG(ret, err);
+	ret = fp_iszero(&(out->Y), &cmp2); EG(ret, err);
+	MUST_HAVE(!((cmp1) && (cmp2)), ret, err);
+
+err:
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+	fp_uninit(&t4);
+	fp_uninit(&t5);
+
+	return ret;
+}

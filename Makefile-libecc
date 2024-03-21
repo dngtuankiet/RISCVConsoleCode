@@ -42,8 +42,6 @@ LIBECC_UTILS_O= \
 	libecc_utils/libecc_utils.o
 
 LIB_FS_O= \
-	src/start.o \
-	src/libecc-main.o \
 	uart/uart.o \
 	trng/trng.o \
 	$(BUILD_DIR)/version.o \
@@ -64,6 +62,14 @@ LIB_FS_O= \
 	libfdt/fdt.o libfdt/fdt_ro.o libfdt/fdt_wip.o libfdt/fdt_sw.o libfdt/fdt_rw.o libfdt/fdt_strerror.o libfdt/fdt_empty_tree.o \
 	libfdt/fdt_addresses.o libfdt/fdt_check.o
 
+MAIN_O= \
+	src/start.o \
+	src/libecc-main.o
+
+BASIC_O= \
+	src/start.o \
+	src/libecc-basic.o
+
 $(BUILD_DIR)/version.c:
 	mkdir -p $(BUILD_DIR)
 	echo "const char *gitid = \"$(shell git describe --always --dirty)\";" > $(BUILD_DIR)/version.c
@@ -79,10 +85,32 @@ $(BUILD_DIR)/version.c:
 %.o: %.cpp
 	$(CCX) $(CFLAGS) -DFSBL_TARGET_ADDR=$(FSBL_TARGET_ADDR) -c $< -o $@
 
+
+#======Basic======#
+
+# elf_basic := $(BUILD_DIR)/out.elf
+# $(elf_basic): $(BASIC_O) $(LIB_FS_O) $(LIBECC_UTILS_O) $(EXT_DEPS_O)
+# 	mkdir -p $(BUILD_DIR)
+# 	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LIB_FS_O) $(LIBECC_UTILS_O) $(EXT_DEPS_O) $(LIBECC) -lgcc -lm -lc
+
+# .PHONY: elf_basic
+# elf_basic: $(elf_basic)
+
+# basic := $(BUILD_DIR)/out.bin
+# $(basic): $(elf_basic)
+# 	$(OBJCOPY) -O binary $< $@
+# 	$(OBJDUMP) -d $^ > $@.dump
+
+# .PHONY: basic
+# basic: $(basic)
+
+
+#======Binary======#
+
 elf := $(BUILD_DIR)/out.elf
-$(elf): $(LIB_FS_O) $(LIBECC_UTILS_O) $(EXT_DEPS_O)
+$(elf): $(BASIC_O) $(LIB_FS_O) $(LIBECC_UTILS_O) $(EXT_DEPS_O)
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(LIB_FS_O) $(LIBECC_UTILS_O) $(EXT_DEPS_O) $(LIBECC) -lgcc -lm -lc
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(BASIC_O) $(LIB_FS_O) $(LIBECC_UTILS_O) $(EXT_DEPS_O) $(LIBECC) -lgcc -lm -lc
 
 .PHONY: elf
 elf: $(elf)
@@ -104,4 +132,4 @@ hex: $(hex)
 
 .PHONY: clean-full
 clean-full:
-	rm -rf $(hex) $(elf) $(LIB_FS_O) build
+	rm -rf $(hex) $(elf) $(LIB_FS_O) $(MAIN_O) $(BASIC_O) build
