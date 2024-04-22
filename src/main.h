@@ -1,6 +1,8 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
+extern unsigned long xpr_reg;
+extern unsigned long puf_reg;
 extern unsigned long trng_reg;
 extern unsigned long uart_reg;
 extern int timescale_freq;

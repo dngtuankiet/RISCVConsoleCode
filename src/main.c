@@ -18,6 +18,7 @@
 #include <platform.h> //this calls devices/headers
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
+#include <xpr.h>
 
 
 volatile unsigned long dtb_target;
@@ -272,6 +273,8 @@ int fdt_find_or_add_subnode(void *fdt, int parentoffset, const char *name)
 int timescale_freq = 0;
 
 // Register to extract
+unsigned long xpr_reg = 0;
+unsigned long puf_reg = 0;
 unsigned long trng_reg = 0;
 unsigned long uart_reg = 0;
 int tlclk_freq;
@@ -458,41 +461,110 @@ int main(int id, unsigned long dtb)
 	fdt_pack((void*)dtb_target);
 
   // custom peripheral get reg values
-  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,trng0");
+  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,xorpuf0");
   if (nodeoffset < 0) {
-    kputs("\r\nCannot find a node with compatible 'console,trng0'\r\nAborting...");
+    kputs("\r\nCannot find a node with compatible 'console,xorpuf0'\r\nAborting...");
     while(1);
   }
-  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &trng_reg, NULL);
+  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &puf_reg, NULL);
   if(err < 0){
-    kputs("\r\nCannot get reg space from compatible 'console,trng0'\r\nAborting...");
+    kputs("\r\nCannot get reg space from compatible 'console,xorpuf0'\r\nAborting...");
+    while(1);
+  }
+
+  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,xpr0");
+  if (nodeoffset < 0) {
+    kputs("\r\nCannot find a node with compatible 'console,xpr0'\r\nAborting...");
+    while(1);
+  }
+  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &xpr_reg, NULL);
+  if(err < 0){
+    kputs("\r\nCannot get reg space from compatible 'console,xpr0'\r\nAborting...");
     while(1);
   }
 
 
   // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
-  int status = 0;
-  uint32_t rand = 0;
 
-  status = trng_setup((void*)trng_reg, (0x1 << 11));
-  if((status == TRNG_ERROR_WAIT) || (status == TRNG_ERROR_RANDOM)){
-    kprintf("Error setup trng\n");
-  }else{
-    for(int i = 0; i < 10; i++){
-      rand = trng_get_random((void*)trng_reg);
-      if(rand == TRNG_ERROR_RANDOM){
-        kprintf("Errot gen random\n");
-        break;
-      }
-      kprintf("random number %d: %d \n",i, rand);
-    }
-  }
-  trng_reset_disable((void*)trng_reg);
+  printk("Test XPR random number mode\n");
 
-  
+  //Reset the XPR
+  _REG32((char*)xpr_reg, XPR_CTRL) = XPR_CTRL_RESET | XPR_CTRL_IR;
+  _REG32((char*)xpr_reg, XPR_CTRL) = 0;
+
+  //Set the delay for calibration
+  _REG32((char*)xpr_reg, XPR_DELAY) = (0x1 << 11);
+
+  //Trigger the Oscillator
+
+
+
+
+
+
+
+
+
+
+
+  // //reset state
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
+  // _REG32((char*)puf_reg, PUF_I0) = 0;
+  // _REG32((char*)puf_reg, PUF_I1) = 0;
+  // _REG32((char*)puf_reg, PUF_ENABLE) = 0;
+
+  // uint32_t count;
+  // count = _REG32((char*)puf_reg, PUF_COUNT);
+  // kprintf("Check counter: %d\n",count);
+
+  // //set trigger
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 1;
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
+  // //start osc
+  // _REG32((char*)puf_reg, PUF_I0) = 1;
+  // //enable counter
+  // _REG32((char*)puf_reg, PUF_ENABLE) = 1;
+
+  // for(int i = 0; i < 1000000; i++){
+  //   if((i%100000) == 0){
+  //     kprintf("Check counter: %d\n",count);
+  //   }
+  // }
+
+  // //disable counter
+  // _REG32((char*)puf_reg, PUF_ENABLE) = 0;
+  // //disable trigger
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
+  // //disable osc
+  // _REG32((char*)puf_reg, PUF_I0) = 0;
+
+
+
+  // //set trigger
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 1;
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
+  // //start osc
+  // _REG32((char*)puf_reg, PUF_I0) = 1;
+  // //enable counter
+  // _REG32((char*)puf_reg, PUF_ENABLE) = 1;
+
+  // for(int i = 0; i < 1000000; i++){
+  //   if((i%100000) == 0){
+  //     kprintf("Check counter: %d\n",count);
+  //   }
+  // }
+
+  // //disable counter
+  // _REG32((char*)puf_reg, PUF_ENABLE) = 0;
+  // //disable trigger
+  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
+  // //disable osc
+  // _REG32((char*)puf_reg, PUF_I0) = 0;
 
   // If finished, stay in a infinite loop
+
+  printk("Test complete\n");
   while(1);
 
   //dead code

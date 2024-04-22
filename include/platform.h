@@ -11,6 +11,8 @@
 #include "devices/uart.h"
 #include "devices/i2c.h"
 #include "devices/trng.h"
+#include "devices/puf.h"
+#include "devices/xpr.h"
 
  // Some things missing from the official encoding.h
 #if __riscv_xlen == 32
