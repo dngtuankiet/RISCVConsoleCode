@@ -18,7 +18,7 @@
 #include <platform.h> //this calls devices/headers
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
-#include <xpr.h>
+// #include <xpr.h>
 
 
 volatile unsigned long dtb_target;
@@ -487,18 +487,76 @@ int main(int id, unsigned long dtb)
   // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
 
-  printk("Test XPR random number mode\n");
+  kprintf("Test XPR random number mode\n");
 
   //Reset the XPR
   _REG32((char*)xpr_reg, XPR_CTRL) = XPR_CTRL_RESET | XPR_CTRL_IR;
   _REG32((char*)xpr_reg, XPR_CTRL) = 0;
 
+  //Check the status
+  uint32_t status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+
   //Set the delay for calibration
   _REG32((char*)xpr_reg, XPR_DELAY) = (0x1 << 11);
 
-  //Trigger the Oscillator
+  //Trigger the Oscillator & Enable the Base generator
+  _REG32((char*)xpr_reg, XPR_CTRL) = XPR_CTRL_ENABLE | XPR_CTRL_I1;
+  kprintf("Control: %d\n",_REG32((char*)xpr_reg, XPR_CTRL));
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Status: %d\n",status);
+  kprintf("Waiting for calibration\n");
+  int max = 0;
+  while(!((_REG32((char*)xpr_reg, XPR_STATUS) & XPR_STAT_VALID) == XPR_STAT_VALID)){
+    status = _REG32((char*)xpr_reg, XPR_STATUS);
+    kprintf("Loop Status: %d\n",status);
+    max = max + 1;
+    if(max == 1000000){
+      kprintf("Error waiting calibration\n");
+      break;
+    }
+  }
+
+  status = _REG32((char*)xpr_reg, XPR_STATUS);
+  kprintf("Check status: %d\n",status);
+  //Checking first random
+  uint32_t rand = _REG32((char*)xpr_reg, XPR_RANDOM);
+  if(rand == 0){
+    kprintf("Error gen random number\n");
+  }
 
 
+  // if((status == TRNG_ERROR_WAIT) || (status == TRNG_ERROR_RANDOM)){
+  //   kprintf("Error setup trng\n");
+  // }else{
+  //   for(int i = 0; i < 10; i++){
+  //     rand = trng_get_random((void*)trng_reg);
+  //     if(rand == TRNG_ERROR_RANDOM){
+  //       kprintf("Errot gen random\n");
+  //       break;
+  //     }
+  //     kprintf("random number %d: %d \n",i, rand);
+  //   }
+  // }
+  // trng_reset_disable((void*)trng_reg);
 
 
 
@@ -564,7 +622,7 @@ int main(int id, unsigned long dtb)
 
   // If finished, stay in a infinite loop
 
-  printk("Test complete\n");
+  kprintf("Test complete\n");
   while(1);
 
   //dead code
