@@ -18,7 +18,7 @@
 #include <platform.h> //this calls devices/headers
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
-// #include <xpr.h>
+#include "xpr_driver/xpr_driver.h"
 
 
 volatile unsigned long dtb_target;
@@ -483,144 +483,27 @@ int main(int id, unsigned long dtb)
     while(1);
   }
 
-
   // TODO: From this point, insert any code
   kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
 
   kprintf("Test XPR random number mode\n");
 
-  //Reset the XPR
-  _REG32((char*)xpr_reg, XPR_CTRL) = XPR_CTRL_RESET | XPR_CTRL_IR;
-  _REG32((char*)xpr_reg, XPR_CTRL) = 0;
-
-  //Check the status
-  uint32_t status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-
-  //Set the delay for calibration
-  _REG32((char*)xpr_reg, XPR_DELAY) = (0x1 << 11);
-
-  //Trigger the Oscillator & Enable the Base generator
-  _REG32((char*)xpr_reg, XPR_CTRL) = XPR_CTRL_ENABLE | XPR_CTRL_I1;
-  kprintf("Control: %d\n",_REG32((char*)xpr_reg, XPR_CTRL));
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Status: %d\n",status);
-  kprintf("Waiting for calibration\n");
-  int max = 0;
-  while(!((_REG32((char*)xpr_reg, XPR_STATUS) & XPR_STAT_VALID) == XPR_STAT_VALID)){
-    status = _REG32((char*)xpr_reg, XPR_STATUS);
-    kprintf("Loop Status: %d\n",status);
-    max = max + 1;
-    if(max == 1000000){
-      kprintf("Error waiting calibration\n");
-      break;
+  uint32_t status=0;
+  uint32_t rand=0;
+  status = xpr_setup((void*)xpr_reg, 0x1 << 11);
+  if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
+    kprintf("Error setup xpr\n");
+  }else{
+    for(int i = 0; i < 10; i++){
+      rand = xpr_get_random((void*)xpr_reg);
+      if(rand == XPR_ERROR_RANDOM){
+        kprintf("Errot gen random\n");
+        break;
+      }
+      kprintf("xpr random number %d: %x \n",i, rand);
     }
   }
-
-  status = _REG32((char*)xpr_reg, XPR_STATUS);
-  kprintf("Check status: %d\n",status);
-  //Checking first random
-  uint32_t rand = _REG32((char*)xpr_reg, XPR_RANDOM);
-  if(rand == 0){
-    kprintf("Error gen random number\n");
-  }
-
-
-  // if((status == TRNG_ERROR_WAIT) || (status == TRNG_ERROR_RANDOM)){
-  //   kprintf("Error setup trng\n");
-  // }else{
-  //   for(int i = 0; i < 10; i++){
-  //     rand = trng_get_random((void*)trng_reg);
-  //     if(rand == TRNG_ERROR_RANDOM){
-  //       kprintf("Errot gen random\n");
-  //       break;
-  //     }
-  //     kprintf("random number %d: %d \n",i, rand);
-  //   }
-  // }
-  // trng_reset_disable((void*)trng_reg);
-
-
-
-
-
-
-
-
-
-  // //reset state
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
-  // _REG32((char*)puf_reg, PUF_I0) = 0;
-  // _REG32((char*)puf_reg, PUF_I1) = 0;
-  // _REG32((char*)puf_reg, PUF_ENABLE) = 0;
-
-  // uint32_t count;
-  // count = _REG32((char*)puf_reg, PUF_COUNT);
-  // kprintf("Check counter: %d\n",count);
-
-  // //set trigger
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 1;
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
-  // //start osc
-  // _REG32((char*)puf_reg, PUF_I0) = 1;
-  // //enable counter
-  // _REG32((char*)puf_reg, PUF_ENABLE) = 1;
-
-  // for(int i = 0; i < 1000000; i++){
-  //   if((i%100000) == 0){
-  //     kprintf("Check counter: %d\n",count);
-  //   }
-  // }
-
-  // //disable counter
-  // _REG32((char*)puf_reg, PUF_ENABLE) = 0;
-  // //disable trigger
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
-  // //disable osc
-  // _REG32((char*)puf_reg, PUF_I0) = 0;
-
-
-
-  // //set trigger
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 1;
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
-  // //start osc
-  // _REG32((char*)puf_reg, PUF_I0) = 1;
-  // //enable counter
-  // _REG32((char*)puf_reg, PUF_ENABLE) = 1;
-
-  // for(int i = 0; i < 1000000; i++){
-  //   if((i%100000) == 0){
-  //     kprintf("Check counter: %d\n",count);
-  //   }
-  // }
-
-  // //disable counter
-  // _REG32((char*)puf_reg, PUF_ENABLE) = 0;
-  // //disable trigger
-  // _REG32((char*)puf_reg, PUF_TRIGGER) = 0;
-  // //disable osc
-  // _REG32((char*)puf_reg, PUF_I0) = 0;
-
-  // If finished, stay in a infinite loop
+  xpr_reset_and_disable((void*)xpr_reg);
 
   kprintf("Test complete\n");
   while(1);

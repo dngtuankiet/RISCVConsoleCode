@@ -27,6 +27,7 @@ LIB_FS_O= \
 	src/main.o \
 	uart/uart.o \
 	trng/trng.o \
+	xpr_driver/xpr_driver.o \
 	$(BUILD_DIR)/version.o \
 	clkutils/clkutils.o \
 	kprintf/kprintf.o \
