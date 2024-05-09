@@ -484,9 +484,9 @@ int main(int id, unsigned long dtb)
   }
 
   // TODO: From this point, insert any code
-  kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
+  // kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
 
-  kprintf("Test XPR random number mode\n");
+  // kprintf("Test XPR random number mode\n");
 
   uint32_t status=0;
   uint32_t rand=0;
@@ -494,18 +494,19 @@ int main(int id, unsigned long dtb)
   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
     kprintf("Error setup xpr\n");
   }else{
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i <= 100000; i++){
       rand = xpr_get_random((void*)xpr_reg);
       if(rand == XPR_ERROR_RANDOM){
         kprintf("Errot gen random\n");
         break;
       }
-      kprintf("xpr random number %d: %x \n",i, rand);
+      // kprintf("xpr random number %d: %x \n",i, rand);
+      kprintf("%x\n", rand);
     }
   }
   xpr_reset_and_disable((void*)xpr_reg);
 
-  kprintf("Test complete\n");
+  // kprintf("Test complete\n");
   while(1);
 
   //dead code
