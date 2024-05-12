@@ -494,7 +494,7 @@ int main(int id, unsigned long dtb)
   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
     kprintf("Error setup xpr\n");
   }else{
-    for(int i = 0; i <= 100000; i++){
+    for(int i = 0; i <= (31250*10); i++){
       rand = xpr_get_random((void*)xpr_reg);
       if(rand == XPR_ERROR_RANDOM){
         kprintf("Errot gen random\n");
