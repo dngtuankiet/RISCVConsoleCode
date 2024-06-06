@@ -482,17 +482,21 @@ int main(int id, unsigned long dtb)
   uint32_t delay = 0x1 << 11;
 
   // uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
-  // uint32_t pair_selection = XPR_PAIR_0; //not work
-  // uint32_t pair_selection = XPR_PAIR_1; //not work
-  // uint32_t pair_selection = XPR_PAIR_2; //not work
-  // uint32_t pair_selection = XPR_PAIR_3; //not work
-  // uint32_t pair_selection = XPR_PAIR_4; //not work
-  // uint32_t pair_selection = XPR_PAIR_5; //not work
-  // uint32_t pair_selection = XPR_PAIR_6;  //not work
-  uint32_t pair_selection = XPR_PAIR_7;
+  // uint32_t pair_selection = XPR_PAIR_0;
+  // uint32_t pair_selection = XPR_PAIR_1;
+  uint32_t pair_selection = XPR_PAIR_2;
+  // uint32_t pair_selection = XPR_PAIR_3;
+  // uint32_t pair_selection = XPR_PAIR_4;
+  // uint32_t pair_selection = XPR_PAIR_5;
+  // uint32_t pair_selection = XPR_PAIR_6;
+  // uint32_t pair_selection = XPR_PAIR_7;
+  // uint32_t pair_selection = XPR_PAIR_8;
+  // uint32_t pair_selection = XPR_PAIR_9;
+  // uint32_t pair_selection = XPR_PAIR_10;
+  // uint32_t pair_selection = XPR_PAIR_11;
 
 
-  //---------------------------------OFFICIAL Tests---------------------------------
+  //---------------------------------XPR cell tests---------------------------------
 
   // uint32_t select = 1;
   // uint32_t max = 12;
@@ -502,6 +506,7 @@ int main(int id, unsigned long dtb)
   //   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
   //     kprintf("Error setup xpr for select: %d\n", pair_selection);
   //   }else{
+  //     kprintf("XPR cell %d\n", select);
   //     for(int i = 0; i <= 5; i++){
   //       rand = xpr_get_random((void*)xpr_reg);
   //       if(rand == XPR_ERROR_RANDOM){
@@ -523,6 +528,7 @@ int main(int id, unsigned long dtb)
   uint32_t random_bits = (31250*100); //100 10^6
 
   status = xpr_setup((void*)xpr_reg, delay, pair_selection);
+  kprintf("XPR setup for selected pair: %d\n", pair_selection);
   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
     kprintf("Error setup xpr\n");
   }else{

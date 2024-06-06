@@ -33,11 +33,12 @@ int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection){
     kprintf("XPR-set delay: %d \n", reg);
     #endif //XPR_DEBUG
 
-    //Enable the ring_gengerator_base and trigger the oscillation mode of xpr_slice
+    //Enable the ring_gengerator_base
     _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_ENABLE);
     //Enable the ring_gengerator_base and trigger the oscillation mode of xpr_slice
     _REG32((char*)xpr_reg, XPR_I1) = pair_selection;
-    _REG32((char*)xpr_reg, XPR_I2) = ~pair_selection;
+    // _REG32((char*)xpr_reg, XPR_I2) = ~pair_selection;
+
     //Enable oscillation mode of xpr_slice
     _REG32((char*)xpr_reg, XPR_IR) = pair_selection;
 
