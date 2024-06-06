@@ -19,7 +19,7 @@
 #include <stdatomic.h>
 #include <plic/plic_driver.h>
 #include "xpr_driver/xpr_driver.h"
-
+#include "include/devices/xpr.h"
 
 volatile unsigned long dtb_target;
 
@@ -444,6 +444,8 @@ int main(int id, unsigned long dtb)
   timescale_freq = fdt32_to_cpu(*val);
   kputs("\r\nGot TIMEBASE: ");
   uart_put_dec((void*)uart_reg, timescale_freq);
+  kputs("\r\n");
+  kprintf("\n");
 	
 	// Put the timebase-frequency for the cpus
   nodeoffset = fdt_subnode_offset((void*)dtb_target, 0, "cpus");
@@ -461,17 +463,6 @@ int main(int id, unsigned long dtb)
 	fdt_pack((void*)dtb_target);
 
   // custom peripheral get reg values
-  nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,xorpuf0");
-  if (nodeoffset < 0) {
-    kputs("\r\nCannot find a node with compatible 'console,xorpuf0'\r\nAborting...");
-    while(1);
-  }
-  err = fdt_get_node_addr_size((void*)dtb_target, nodeoffset, &puf_reg, NULL);
-  if(err < 0){
-    kputs("\r\nCannot get reg space from compatible 'console,xorpuf0'\r\nAborting...");
-    while(1);
-  }
-
   nodeoffset = fdt_node_offset_by_compatible((void*)dtb, 0, "console,xpr0");
   if (nodeoffset < 0) {
     kputs("\r\nCannot find a node with compatible 'console,xpr0'\r\nAborting...");
@@ -486,15 +477,56 @@ int main(int id, unsigned long dtb)
   // TODO: From this point, insert any code
   // kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
 
-  // kprintf("Test XPR random number mode\n");
-
   uint32_t status=0;
   uint32_t rand=0;
-  status = xpr_setup((void*)xpr_reg, 0x1 << 11);
+  uint32_t delay = 0x1 << 11;
+
+  // uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
+  // uint32_t pair_selection = XPR_PAIR_0; //not work
+  // uint32_t pair_selection = XPR_PAIR_1; //not work
+  // uint32_t pair_selection = XPR_PAIR_2; //not work
+  // uint32_t pair_selection = XPR_PAIR_3; //not work
+  // uint32_t pair_selection = XPR_PAIR_4; //not work
+  // uint32_t pair_selection = XPR_PAIR_5; //not work
+  // uint32_t pair_selection = XPR_PAIR_6;  //not work
+  uint32_t pair_selection = XPR_PAIR_7;
+
+
+  //---------------------------------OFFICIAL Tests---------------------------------
+
+  // uint32_t select = 1;
+  // uint32_t max = 12;
+  // for (select = 1; select < max; select++){
+  //   pair_selection = 1 << select;
+  //   status = xpr_setup((void*)xpr_reg, delay, pair_selection);
+  //   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
+  //     kprintf("Error setup xpr for select: %d\n", pair_selection);
+  //   }else{
+  //     for(int i = 0; i <= 5; i++){
+  //       rand = xpr_get_random((void*)xpr_reg);
+  //       if(rand == XPR_ERROR_RANDOM){
+  //         kprintf("Errot gen random\n");
+  //         break;
+  //       }
+  //       // kprintf("xpr random number %d: %x \n",i, rand);
+  //       kprintf("%x\n", rand);
+  //     }
+  //   }
+  //   xpr_reset_and_disable((void*)xpr_reg);
+  // }
+
+
+  //---------------------------------OFFICIAL Tests---------------------------------
+
+  // uint32_t random_bits = 31250; //10^6
+  // uint32_t random_bits = (31250*10); //10 10^6
+  uint32_t random_bits = (31250*100); //100 10^6
+
+  status = xpr_setup((void*)xpr_reg, delay, pair_selection);
   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
     kprintf("Error setup xpr\n");
   }else{
-    for(int i = 0; i <= (31250*10); i++){
+    for(int i = 0; i <= random_bits; i++){
       rand = xpr_get_random((void*)xpr_reg);
       if(rand == XPR_ERROR_RANDOM){
         kprintf("Errot gen random\n");
@@ -506,7 +538,10 @@ int main(int id, unsigned long dtb)
   }
   xpr_reset_and_disable((void*)xpr_reg);
 
-  // kprintf("Test complete\n");
+
+
+
+
   while(1);
 
   //dead code

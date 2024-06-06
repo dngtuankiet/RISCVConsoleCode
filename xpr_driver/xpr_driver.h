@@ -6,14 +6,15 @@
 
 #define MAX_WAIT_TIME 1000000
 #define XPR_ERROR_WAIT -1
-#define XPR_ERROR_RANDOM 0
+#define XPR_ERROR_RANDOM -2
+#define XPR_OK 0
 
 #include <stdint.h>
 
 void xpr_reset(void* xpr_reg);
 void xpr_reset_and_disable(void* xpr_reg);
 
-int xpr_setup(void* xpr_reg, uint32_t delay);
+int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
 uint32_t xpr_get_random(void* xpr_reg);
 
 

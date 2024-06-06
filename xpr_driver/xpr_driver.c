@@ -6,16 +6,22 @@ void xpr_reset(void* xpr_reg){
     //reset high, reset the ring_gengerator_base by XPR_CTRL_RESET
     //reset low, reset the xpr_slice by XPR_CTRL_IR = 0
     _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_RESET);
+    _REG32((char*)xpr_reg, XPR_I1) = 0;
+    _REG32((char*)xpr_reg, XPR_I2) = 0;
+    _REG32((char*)xpr_reg, XPR_IR) = 0;
 }
 
 void xpr_reset_and_disable(void* xpr_reg){
     //reset high, reset the ring_gengerator_base by XPR_CTRL_RESET
     //reset low, reset the xpr_slice by XPR_CTRL_IR = 0
     _REG32((char*)xpr_reg, XPR_CTRL) = XPR_CTRL_RESET;
+    _REG32((char*)xpr_reg, XPR_I1) = 0;
+    _REG32((char*)xpr_reg, XPR_I2) = 0;
+    _REG32((char*)xpr_reg, XPR_IR) = 0;
 }
 
-int xpr_setup(void* xpr_reg, uint32_t delay){
-    uint32_t reg = 0;
+int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection){
+    // uint32_t reg = 0;
 
     xpr_reset_and_disable(xpr_reg);
     _REG32((char*)xpr_reg, XPR_CTRL) = 0x0; //release reset signal of the ring_gengerator_base
@@ -28,7 +34,14 @@ int xpr_setup(void* xpr_reg, uint32_t delay){
     #endif //XPR_DEBUG
 
     //Enable the ring_gengerator_base and trigger the oscillation mode of xpr_slice
-    _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_ENABLE | XPR_CTRL_I1 | XPR_CTRL_IR);
+    _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_ENABLE);
+    //Enable the ring_gengerator_base and trigger the oscillation mode of xpr_slice
+    _REG32((char*)xpr_reg, XPR_I1) = pair_selection;
+    _REG32((char*)xpr_reg, XPR_I2) = ~pair_selection;
+    //Enable oscillation mode of xpr_slice
+    _REG32((char*)xpr_reg, XPR_IR) = pair_selection;
+
+
     #ifdef XPR_DEBUG
     reg = _REG32(xpr_reg, XPR_CTRL);
     kprintf("XPR-set control: %d \n", reg);
@@ -60,7 +73,7 @@ int xpr_setup(void* xpr_reg, uint32_t delay){
 
 
 uint32_t xpr_get_random(void* xpr_reg){
-    uint32_t reg = 0;
+    // uint32_t reg = 0;
     uint32_t rand = 0;
     _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) & (~XPR_CTRL_NEXT);
     _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | XPR_CTRL_NEXT;
