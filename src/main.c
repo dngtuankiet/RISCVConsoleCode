@@ -481,10 +481,10 @@ int main(int id, unsigned long dtb)
   uint32_t rand=0;
   uint32_t delay = 0x1 << 11;
 
-  // uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
+  uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
   // uint32_t pair_selection = XPR_PAIR_0;
   // uint32_t pair_selection = XPR_PAIR_1;
-  uint32_t pair_selection = XPR_PAIR_2;
+  // uint32_t pair_selection = XPR_PAIR_2;
   // uint32_t pair_selection = XPR_PAIR_3;
   // uint32_t pair_selection = XPR_PAIR_4;
   // uint32_t pair_selection = XPR_PAIR_5;
@@ -495,7 +495,7 @@ int main(int id, unsigned long dtb)
   // uint32_t pair_selection = XPR_PAIR_10;
   // uint32_t pair_selection = XPR_PAIR_11;
 
-
+  // uint32_t pair_selection = XPR_PAIR_2 | XPR_PAIR_6;
   //---------------------------------XPR cell tests---------------------------------
 
   // uint32_t select = 1;
