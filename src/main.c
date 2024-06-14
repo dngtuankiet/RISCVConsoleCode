@@ -495,34 +495,37 @@ int main(int id, unsigned long dtb)
   // uint32_t pair_selection = XPR_PAIR_10;
   // uint32_t pair_selection = XPR_PAIR_11;
 
+  // #define XPR_CELL_TEST
+  // #define OFFICIAL_TEST
+  #define STARTUP_TEST
 
   //---------------------------------XPR cell tests---------------------------------
-
-  // uint32_t select = 1;
-  // uint32_t max = 12;
-  // for (select = 1; select < max; select++){
-  //   pair_selection = 1 << select;
-  //   status = xpr_setup((void*)xpr_reg, delay, pair_selection);
-  //   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
-  //     kprintf("Error setup xpr for select: %d\n", pair_selection);
-  //   }else{
-  //     kprintf("XPR cell %d\n", select);
-  //     for(int i = 0; i <= 5; i++){
-  //       rand = xpr_get_random((void*)xpr_reg);
-  //       if(rand == XPR_ERROR_RANDOM){
-  //         kprintf("Errot gen random\n");
-  //         break;
-  //       }
-  //       // kprintf("xpr random number %d: %x \n",i, rand);
-  //       kprintf("%x\n", rand);
-  //     }
-  //   }
-  //   xpr_reset_and_disable((void*)xpr_reg);
-  // }
-
+  #ifdef XPR_CELL_TEST
+  uint32_t select = 1;
+  uint32_t max = 12;
+  for (select = 1; select < max; select++){
+    pair_selection = 1 << select;
+    status = xpr_setup((void*)xpr_reg, delay, pair_selection);
+    if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
+      kprintf("Error setup xpr for select: %d\n", pair_selection);
+    }else{
+      kprintf("XPR cell %d\n", select);
+      for(int i = 0; i <= 5; i++){
+        rand = xpr_get_random((void*)xpr_reg);
+        if(rand == XPR_ERROR_RANDOM){
+          kprintf("Errot gen random\n");
+          break;
+        }
+        // kprintf("xpr random number %d: %x \n",i, rand);
+        kprintf("%x\n", rand);
+      }
+    }
+    xpr_reset_and_disable((void*)xpr_reg);
+  }
+  #endif //XPR_CELL_TEST
 
   //---------------------------------OFFICIAL Tests---------------------------------
-
+  #ifdef OFFICIAL_TEST
   // uint32_t random_bits = 31250; //10^6
   // uint32_t random_bits = (31250*10); //10 10^6
   uint32_t random_bits = (31250*100); //100 10^6
@@ -543,9 +546,22 @@ int main(int id, unsigned long dtb)
     }
   }
   xpr_reset_and_disable((void*)xpr_reg);
+  #endif //OFFICIAL_TEST
 
+  //---------------------------------Start-up Test---------------------------------
+  #ifdef STARTUP_TEST
+  uint32_t random_bits = (31250*100); //100 10^6
 
-
+  for(int i = 0; i <= random_bits; i++){
+    rand = xpr_setup((void*)xpr_reg, delay, pair_selection);
+    xpr_reset_and_disable((void*)xpr_reg);
+    if((rand == XPR_ERROR_WAIT) || (rand == XPR_ERROR_RANDOM)){
+      kprintf("Error setup xpr\n");
+    }else{
+      kprintf("%x\n", rand);
+    }
+  }
+  #endif //STARTUP_TEST
 
 
   while(1);

@@ -70,6 +70,7 @@ int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection){
         kprintf("XPR-error gen random number\n");
         return XPR_ERROR_RANDOM;
     }
+    return rand;
 }
 
 
