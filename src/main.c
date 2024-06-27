@@ -479,6 +479,7 @@ int main(int id, unsigned long dtb)
 
   uint32_t status=0;
   uint32_t rand=0;
+  uint32_t puf=0;
   uint32_t delay = 0x1 << 11;
 
   uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
@@ -521,32 +522,81 @@ int main(int id, unsigned long dtb)
   // }
 
 
-  //---------------------------------OFFICIAL Tests---------------------------------
+  //---------------------------------OFFICIAL Random Tests---------------------------------
 
-  // uint32_t random_bits = 31250; //10^6
-  // uint32_t random_bits = (31250*10); //10 10^6
-  uint32_t random_bits = (31250*100); //100 10^6
+  // uint32_t random_bits = 10;
+  // // uint32_t random_bits = 31250; //10^6
+  // // uint32_t random_bits = (31250*10); //10 10^6
+  // // uint32_t random_bits = (31250*100); //100 10^6
 
-  status = xpr_setup((void*)xpr_reg, delay, pair_selection);
-  kprintf("XPR setup for selected pair: %d\n", pair_selection);
-  if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
-    kprintf("Error setup xpr\n");
-  }else{
-    for(int i = 0; i <= random_bits; i++){
-      rand = xpr_get_random((void*)xpr_reg);
-      if(rand == XPR_ERROR_RANDOM){
-        kprintf("Errot gen random\n");
-        break;
-      }
-      // kprintf("xpr random number %d: %x \n",i, rand);
-      kprintf("%x\n", rand);
+  // status = xpr_setup((void*)xpr_reg, delay, pair_selection);
+  // kprintf("XPR setup for selected pair: %d\n", pair_selection);
+  // if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
+  //   kprintf("Error setup xpr\n");
+  // }else{
+  //   for(int i = 0; i <= random_bits; i++){
+  //     rand = xpr_get_random((void*)xpr_reg);
+  //     if(rand == XPR_ERROR_RANDOM){
+  //       kprintf("Errot gen random\n");
+  //       break;
+  //     }
+  //     // kprintf("xpr random number %d: %x \n",i, rand);
+  //     kprintf("%x\n", rand);
+  //   }
+  // }
+  // xpr_reset_and_disable((void*)xpr_reg);
+
+  //---------------------------------OFFICIAL PUF Tests---------------------------------
+
+
+  kprintf("XPR Test XOR PUF \n");
+  
+  kprintf("\nTrigger 1:\n");
+  for(int j = 0; j <= 10; j++){
+    // kprintf("XOR PUF with pair selection: %d\n", pair_selection);
+    for(int i = 0; i <= 10000; i++){
     }
+    puf = xpr_xor_puf_trigger1((void*)xpr_reg, delay, pair_selection);
+    kprintf("PUF[%d]: %x\n",j, puf);
   }
-  xpr_reset_and_disable((void*)xpr_reg);
+  
+  kprintf("\nTrigger 2:\n");
+  for(int j = 0; j <= 10; j++){
+    // kprintf("XOR PUF with pair selection: %d\n", pair_selection);
+    for(int i = 0; i <= 10000; i++){
+    }
+    puf = xpr_xor_puf_trigger2((void*)xpr_reg, delay, pair_selection);
+    kprintf("PUF[%d]: %x\n",j, puf);
+  }
 
+  //---------------------------------Test---------------------------------
 
+  // uint32_t random_bits = 10;
+  // // uint32_t random_bits = 31250; //10^6
+  // // uint32_t random_bits = (31250*10); //10 10^6
+  // // uint32_t random_bits = (31250*100); //100 10^6
 
-
+  // status = xpr_setup((void*)xpr_reg, delay, pair_selection);
+  // kprintf("XPR setup for selected pair: %d\n", pair_selection);
+  // if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
+  //   kprintf("Error setup xpr\n");
+  // }else{
+  //   for(int i = 0; i <= random_bits; i++){
+  //     rand = xpr_get_random((void*)xpr_reg);
+  //     puf = _REG32((char*)xpr_reg, XPR_PUF);
+  //     if(rand == XPR_ERROR_RANDOM){
+  //       kprintf("Errot gen random\n");
+  //       break;
+  //     }
+  //     kprintf("rand - %x\n", rand);
+  //     kprintf("RG_STATE - %x\n", _REG32((char*)xpr_reg, XPR_RG_STATE));
+  //     if(puf != 0){
+  //       kprintf("puf-%x\n", puf);
+  //     }
+  //     // kprintf("control: %x\n", _REG32((char*)xpr_reg, XPR_CTRL));
+  //   }
+  // }
+  // xpr_reset_and_disable((void*)xpr_reg);
 
   while(1);
 

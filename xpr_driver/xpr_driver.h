@@ -17,6 +17,8 @@ void xpr_reset_and_disable(void* xpr_reg);
 int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
 uint32_t xpr_get_random(void* xpr_reg);
 
+int xpr_xor_puf(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
+
 
 
 #endif /* !__ASSEMBLER__ */

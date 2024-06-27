@@ -9,11 +9,21 @@
 #define XPR_IR          0x10 
 #define XPR_I1          0x14
 #define XPR_I2          0x18
+#define XPR_PUF         0x1C
+#define XPR_SEED        0x20
+#define XPR_RG_STATE    0x24
+
+
+
 
 
 //XPR_CTRL control register
 #define XPR_CTRL_ENABLE (0x1<<0)
 #define XPR_CTRL_NEXT   (0x1<<1)
+#define XPR_CTRL_INIT   (0x1<<2)
+#define XPR_CTRL_PUF_MODE   (0x1<<3)
+#define XPR_CTRL_RANDOM_MODE   (0x0<<3)
+
 #define XPR_CTRL_RESET  (0x1<<8)
 
 //XPR_STATUS

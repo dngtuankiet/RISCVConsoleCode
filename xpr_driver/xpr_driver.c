@@ -9,6 +9,9 @@ void xpr_reset(void* xpr_reg){
     _REG32((char*)xpr_reg, XPR_I1) = 0;
     _REG32((char*)xpr_reg, XPR_I2) = 0;
     _REG32((char*)xpr_reg, XPR_IR) = 0;
+
+    //check RG_STATE
+    kprintf("RG_STATE (should be 0): %d\n", _REG32((char*)xpr_reg, XPR_RG_STATE));
 }
 
 void xpr_reset_and_disable(void* xpr_reg){
@@ -18,6 +21,9 @@ void xpr_reset_and_disable(void* xpr_reg){
     _REG32((char*)xpr_reg, XPR_I1) = 0;
     _REG32((char*)xpr_reg, XPR_I2) = 0;
     _REG32((char*)xpr_reg, XPR_IR) = 0;
+
+    //check RG_STATE
+    // kprintf("RG_STATE (should be 0): %x\n", _REG32((char*)xpr_reg, XPR_RG_STATE));
 }
 
 int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection){
@@ -94,4 +100,51 @@ uint32_t xpr_get_random(void* xpr_reg){
 
     rand =  _REG32((char*)xpr_reg, XPR_RANDOM);
     return rand;
+}
+
+int xpr_xor_puf_trigger1(void* xpr_reg, uint32_t delay, uint32_t pair_selection){
+    uint32_t puf = 0;
+
+    xpr_reset_and_disable(xpr_reg);
+    _REG32((char*)xpr_reg, XPR_CTRL) = 0x0; //release reset signal of the ring_gengerator_base
+
+    _REG32((char*)xpr_reg, XPR_IR) = 0;
+    _REG32((char*)xpr_reg, XPR_I1) = 0;
+    _REG32((char*)xpr_reg, XPR_I2) = 0;
+    _REG32((char*)xpr_reg, XPR_IR) = pair_selection;
+
+    //trigger xor_puf
+    _REG32((char*)xpr_reg, XPR_I1) = pair_selection;
+    _REG32((char*)xpr_reg, XPR_I2) = pair_selection;
+
+    for(int i = 0; i <= 10000; i++){
+    }
+
+    puf = _REG32((char*)xpr_reg, XPR_PUF);
+
+    return puf;
+}
+
+int xpr_xor_puf_trigger2(void* xpr_reg, uint32_t delay, uint32_t pair_selection){
+    uint32_t puf = 0;
+
+    xpr_reset_and_disable(xpr_reg);
+    _REG32((char*)xpr_reg, XPR_CTRL) = 0x0; //release reset signal of the ring_gengerator_base
+
+    _REG32((char*)xpr_reg, XPR_IR) = 0;
+    _REG32((char*)xpr_reg, XPR_I1) = 0;
+    _REG32((char*)xpr_reg, XPR_I2) = 0;
+
+    //trigger xor_puf
+    _REG32((char*)xpr_reg, XPR_I1) = pair_selection;
+    _REG32((char*)xpr_reg, XPR_I2) = pair_selection;
+
+    _REG32((char*)xpr_reg, XPR_IR) = pair_selection;
+
+    for(int i = 0; i <= 10000; i++){
+    }
+
+    puf = _REG32((char*)xpr_reg, XPR_PUF);
+
+    return puf;
 }
