@@ -482,11 +482,21 @@ int main(int id, unsigned long dtb)
     kputs("\r\nCannot get reg space from compatible 'console,xpr0'\r\nAborting...");
     while(1);
   }
+  kprintf("\n");
+
+  // #define STARTUP_TEST
+  #define STARTUP_TEST2
+  // #define OFFICIAL_TEST
+
+
+  #ifdef OFFICIAL_TEST
 
   // TODO: From this point, insert any code
   // kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
 
-  // kprintf("Test XPR random number mode\n");
+  // kprintf("Test Official XPR random number mode\n");
+  
+
 
   uint32_t status=0;
   uint32_t rand=0;
@@ -494,7 +504,7 @@ int main(int id, unsigned long dtb)
   if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
     kprintf("Error setup xpr\n");
   }else{
-    for(int i = 0; i <= (31250*10); i++){
+    for(int i = 0; i <= (31250*100); i++){
       rand = xpr_get_random((void*)xpr_reg);
       if(rand == XPR_ERROR_RANDOM){
         kprintf("Errot gen random\n");
@@ -506,7 +516,58 @@ int main(int id, unsigned long dtb)
   }
   xpr_reset_and_disable((void*)xpr_reg);
 
-  // kprintf("Test complete\n");
+  #endif //OFFICIAL_TEST
+
+  #ifdef STARTUP_TEST
+
+  // TODO: From this point, insert any code
+  // kputs("\r\n\n\nWelcome! Hello world!\r\n\n");
+
+  // kprintf("Test XPR random number mode\n");
+
+  uint32_t rand=0;
+  
+  for(int i = 0; i <= (31250*100); i++){
+    rand = xpr_setup((void*)xpr_reg, 0x1 << 11);
+      if((rand == XPR_ERROR_WAIT) || (rand == XPR_ERROR_RANDOM)){
+        kprintf("Error setup xpr\n");
+      }else{
+        if(rand == XPR_ERROR_RANDOM){
+          kprintf("Errot gen random\n");
+          break;
+        }
+        kprintf("%x\n", rand);
+      }
+    xpr_reset_and_disable((void*)xpr_reg);
+  }
+  
+
+  #endif //STARTUP_TEST
+
+  #ifdef STARTUP_TEST2
+
+  kprintf("Startup Test 2 for XPR TRNG\n");
+
+  uint32_t status=0;
+  uint32_t rand=0;
+  for(int i = 0; i <= (31250*100); i++){
+    status = xpr_setup((void*)xpr_reg, 0x1 << 11);
+    if((status == XPR_ERROR_WAIT) || (status == XPR_ERROR_RANDOM)){
+      kprintf("Error setup xpr\n");
+    }else{
+        rand = xpr_get_random((void*)xpr_reg);
+        if(rand == XPR_ERROR_RANDOM){
+          kprintf("Errot gen random\n");
+          break;
+        }
+        kprintf("%x\n", rand);
+    }
+    xpr_reset_and_disable((void*)xpr_reg);
+  }
+
+  #endif //STARTUP_TEST2
+
+
   while(1);
 
   //dead code

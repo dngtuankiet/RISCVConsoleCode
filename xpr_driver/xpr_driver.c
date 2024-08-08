@@ -28,7 +28,11 @@ int xpr_setup(void* xpr_reg, uint32_t delay){
     #endif //XPR_DEBUG
 
     //Enable the ring_gengerator_base and trigger the oscillation mode of xpr_slice
-    _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_ENABLE | XPR_CTRL_I1 | XPR_CTRL_IR);
+    _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_ENABLE);
+    _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_I1);
+    _REG32((char*)xpr_reg, XPR_CTRL) = _REG32((char*)xpr_reg, XPR_CTRL) | (XPR_CTRL_IR);
+
+
     #ifdef XPR_DEBUG
     reg = _REG32(xpr_reg, XPR_CTRL);
     kprintf("XPR-set control: %d \n", reg);
