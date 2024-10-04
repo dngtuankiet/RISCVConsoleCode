@@ -12,6 +12,7 @@
 #define XPR_PUF         0x1C
 #define XPR_SEED        0x20
 #define XPR_RG_STATE    0x24
+#define XPR_MASK        0x28
 
 
 

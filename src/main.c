@@ -484,10 +484,11 @@ int main(int id, unsigned long dtb)
 
   // #define RANDOM_TEST
   // #define XORPUF_TEST
-  #define XPRPUF_TEST
+  // #define XPRPUF_TEST
+  #define XPRPUF_DATA
 
 
-  uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
+  // uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
   // uint32_t pair_selection = XPR_PAIR_0;
   // uint32_t pair_selection = XPR_PAIR_1;
   // uint32_t pair_selection = XPR_PAIR_2; //use this for random
@@ -530,6 +531,7 @@ int main(int id, unsigned long dtb)
   //---------------------------------OFFICIAL Random Tests---------------------------------
 
   #ifdef RANDOM_TEST
+  uint32_t pair_selection = XPR_PAIR_2; //use this for random
   // uint32_t random_bits = 10;
   // uint32_t random_bits = 31250; //10^6
   // uint32_t random_bits = (31250*10); //10 10^6
@@ -553,9 +555,10 @@ int main(int id, unsigned long dtb)
   xpr_reset_and_disable((void*)xpr_reg);
   #endif //RANDOM_TEST
 
-  //---------------------------------OFFICIAL PUF Tests---------------------------------
+  //---------------------------------OFFICIAL ORIGINAL XOR PUF Tests---------------------------------
 
   #ifdef XORPUF_TEST
+  uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
   kprintf("XPR Test XOR PUF \n");
   
   kprintf("\nTrigger 1:\n");
@@ -580,11 +583,16 @@ int main(int id, unsigned long dtb)
   //---------------------------------OFFICIAL XPRPUF Tests---------------------------------
 
   #ifdef XPRPUF_TEST
+  uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
   uint32_t challenge = 0;
   kprintf("XPR PUF Test \n");
+  uint32_t mask = 0;
+  mask = masking_generation((void*)xpr_reg, /*masking_times*/ 100, pair_selection);
+
+
   for(challenge = 0; challenge <= 5; challenge++){
     kprintf("Setting Challenge %d\n", challenge);
-    puf = xpr_puf_mode((void*)xpr_reg, delay, pair_selection, challenge);
+    puf = xpr_puf_mode((void*)xpr_reg, delay, mask, pair_selection, challenge);
     kprintf("PUF value: %x\n\n", puf);
     for(int i = 0; i < 10; i++){
       rand = xpr_get_random((void*)xpr_reg);
@@ -598,12 +606,41 @@ int main(int id, unsigned long dtb)
     
   }
   
-
-
-
   #endif //XPRPUF_TEST
 
-  //---------------------------------Test---------------------------------
+
+//---------------------------------OFFICIAL MASK Generation---------------------------------
+
+
+//---------------------------------OFFICIAL XPRPUF Dataset---------------------------------
+
+#ifdef XPRPUF_DATA
+  uint32_t pair_selection = XPR_PAIR_0 | XPR_PAIR_1 | XPR_PAIR_2 | XPR_PAIR_3 | XPR_PAIR_4 | XPR_PAIR_5 | XPR_PAIR_6 | XPR_PAIR_7 | XPR_PAIR_8 | XPR_PAIR_9 | XPR_PAIR_10 | XPR_PAIR_11; // OK
+  uint32_t challenge = 0;
+  kprintf("XPR PUF Test \n");
+  uint32_t mask = 0;
+  mask = masking_generation((void*)xpr_reg, /*masking_times*/ 10000, pair_selection);
+
+
+  for(challenge = 0; challenge <= 1000000; challenge++){
+    // kprintf("Setting Challenge %d\n", challenge);
+    puf = xpr_puf_mode((void*)xpr_reg, delay, mask, pair_selection, challenge);
+    // kprintf("%x\n\n", puf);
+    for(int i = 0; i < 1; i++){
+      rand = xpr_get_random((void*)xpr_reg);
+      if(rand == XPR_ERROR_RANDOM){
+        kprintf("Errot gen random\n");
+        break;
+      }
+      // kprintf("xpr random number %d: %x \n",i, rand);
+      kprintf("%x\n", rand);
+    }
+  }
+  
+  #endif //XPRPUF_DATA
+
+
+//---------------------------------Test---------------------------------
 
   // uint32_t random_bits = 10;
   // // uint32_t random_bits = 31250; //10^6

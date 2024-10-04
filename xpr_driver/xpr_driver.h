@@ -18,10 +18,10 @@ int xpr_setup(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
 uint32_t xpr_get_random(void* xpr_reg);
 
 int xpr_xor_puf(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
-int xpr_xor_puf_trigger1(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
-int xpr_xor_puf_trigger2(void* xpr_reg, uint32_t delay, uint32_t pair_selection);
+int xpr_xor_puf_trigger1(void* xpr_reg, uint32_t pair_selection);
+int xpr_xor_puf_trigger2(void* xpr_reg, uint32_t pair_selection);
 
-int xpr_puf_mode(void * xpr_reg, uint32_t delay, uint32_t pair_selection, uint32_t challenge);
+int xpr_puf_mode(void * xpr_reg, uint32_t delay, uint32_t mask, uint32_t pair_selection, uint32_t challenge);
 
 
 
